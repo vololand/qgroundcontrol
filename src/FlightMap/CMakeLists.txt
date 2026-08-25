@@ -1,8 +1,3 @@
-# ============================================================================
-# Flight Map Module
-# Map widgets, vehicle indicators, and mission visualization
-# ============================================================================
-
 qt_add_library(FlightMapModule STATIC)
 
 qt_add_qml_module(FlightMapModule
@@ -12,6 +7,7 @@ qt_add_qml_module(FlightMapModule
     QML_FILES
         MapItems/CameraTriggerIndicator.qml
         MapItems/CustomMapItems.qml
+        MapItems/CsutomWayPointEditor.qml
         MapItems/MapLineArrow.qml
         MapItems/MissionItemIndicator.qml
         MapItems/MissionItemIndicatorDrag.qml
@@ -26,6 +22,9 @@ qt_add_qml_module(FlightMapModule
         Widgets/CenterMapDropButton.qml
         Widgets/CenterMapDropPanel.qml
         Widgets/CompassDial.qml
+        Widgets/CustomHUDWidget.qml
+        Widgets/CustomDroneMetrics.qml
+        Widgets/CustomStationMetrics.qml
         Widgets/CompassHeadingIndicator.qml
         Widgets/HorizontalCompassAttitude.qml
         Widgets/IntegratedAttitudeIndicator.qml
@@ -39,5 +38,5 @@ qt_add_qml_module(FlightMapModule
         Widgets/VerticalCompassAttitude.qml
         FlightMap.qml
         MapScale.qml
-    NO_PLUGIN
+    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
 )

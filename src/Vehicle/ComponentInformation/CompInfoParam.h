@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include "CompInfo.h"
@@ -17,9 +26,9 @@ class CompInfoParam : public CompInfo
     Q_OBJECT
 
 public:
-    CompInfoParam(uint8_t compId_, Vehicle* vehicle_, QObject* parent = nullptr);
+    CompInfoParam(uint8_t compId, Vehicle* vehicle, QObject* parent = nullptr);
 
-    FactMetaData* factMetaDataForName(const QString& name, FactMetaData::ValueType_t valueType);
+    FactMetaData* factMetaDataForName(const QString& name, FactMetaData::ValueType_t type);
 
     // Overrides from CompInfo
     void setJson(const QString& metadataJsonFileName) override;

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -5,6 +14,8 @@ import Qt.labs.qmlmodels
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.Controllers
+import QGroundControl.ScreenTools
 
 AnalyzePage {
     id: logDownloadPage
@@ -26,7 +37,7 @@ AnalyzePage {
 
                 GridLayout {
                     id: gridLayout
-                    rows: LogDownloadController.model.count + 1
+                    rows: logDownloadController.model.count + 1
                     columns: 5
                     flow: GridLayout.TopToBottom
                     columnSpacing: ScreenTools.defaultFontPixelWidth
@@ -38,7 +49,7 @@ AnalyzePage {
                     }
 
                     Repeater {
-                        model: LogDownloadController.model
+                        model: logDownloadController.model
 
                         QGCCheckBox {
                             Binding on checkState {
@@ -52,7 +63,7 @@ AnalyzePage {
                     QGCLabel { text: qsTr("Id") }
 
                     Repeater {
-                        model: LogDownloadController.model
+                        model: logDownloadController.model
 
                         QGCLabel { text: object.id }
                     }
@@ -60,7 +71,7 @@ AnalyzePage {
                     QGCLabel { text: qsTr("Date") }
 
                     Repeater {
-                        model: LogDownloadController.model
+                        model: logDownloadController.model
 
                         QGCLabel {
                             text: {
@@ -80,7 +91,7 @@ AnalyzePage {
                     QGCLabel { text: qsTr("Size") }
 
                     Repeater {
-                        model: LogDownloadController.model
+                        model: logDownloadController.model
 
                         QGCLabel { text: object.sizeStr }
                     }
@@ -88,7 +99,7 @@ AnalyzePage {
                     QGCLabel { text: qsTr("Status") }
 
                     Repeater {
-                        model: LogDownloadController.model
+                        model: logDownloadController.model
 
                         QGCLabel { text: object.status }
                     }
@@ -96,46 +107,49 @@ AnalyzePage {
             }
 
             ColumnLayout {
+                Layout.preferredWidth: mainWindow.sidebarTargetWidth - ScreenTools.defaultFontPixelWidth / 2 - 1
                 spacing: ScreenTools.defaultFontPixelWidth
                 Layout.alignment: Qt.AlignTop
                 Layout.fillWidth: false
 
                 QGCButton {
                     Layout.fillWidth: true
-                    enabled: !LogDownloadController.requestingList && !LogDownloadController.downloadingLogs
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.5
+                    enabled: !logDownloadController.requestingList && !logDownloadController.downloadingLogs
                     text: qsTr("Refresh")
 
                     onClicked: {
                         if (!QGroundControl.multiVehicleManager.activeVehicle || QGroundControl.multiVehicleManager.activeVehicle.isOfflineEditingVehicle) {
-                            QGroundControl.showMessageDialog(logDownloadPage, qsTr("Log Refresh"), qsTr("You must be connected to a vehicle in order to download logs."))
+                            mainWindow.showMessageDialog(qsTr("Log Refresh"), qsTr("You must be connected to a vehicle in order to download logs."))
                             return
                         }
 
-                        LogDownloadController.refresh()
+                        logDownloadController.refresh()
                     }
                 }
 
                 QGCButton {
                     Layout.fillWidth: true
-                    enabled: !LogDownloadController.requestingList && !LogDownloadController.downloadingLogs
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.5
+                    enabled: !logDownloadController.requestingList && !logDownloadController.downloadingLogs
                     text: qsTr("Download")
 
                     onClicked: {
                         var logsSelected = false
-                        for (var i = 0; i < LogDownloadController.model.count; i++) {
-                            if (LogDownloadController.model.get(i).selected) {
+                        for (var i = 0; i < logDownloadController.model.count; i++) {
+                            if (logDownloadController.model.get(i).selected) {
                                 logsSelected = true
                                 break
                             }
                         }
 
                         if (!logsSelected) {
-                            QGroundControl.showMessageDialog(logDownloadPage, qsTr("Log Download"), qsTr("You must select at least one log file to download."))
+                            mainWindow.showMessageDialog(qsTr("Log Download"), qsTr("You must select at least one log file to download."))
                             return
                         }
 
                         if (ScreenTools.isMobile) {
-                            LogDownloadController.download()
+                            logDownloadController.download()
                             return
                         }
 
@@ -148,7 +162,7 @@ AnalyzePage {
                     QGCFileDialog {
                         id: fileDialog
                         onAcceptedForLoad: (file) => {
-                            LogDownloadController.download(file)
+                            logDownloadController.download(file)
                             close()
                         }
                     }
@@ -156,22 +170,23 @@ AnalyzePage {
 
                 QGCButton {
                     Layout.fillWidth: true
-                    enabled: !LogDownloadController.requestingList && !LogDownloadController.downloadingLogs && (LogDownloadController.model.count > 0)
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.5
+                    enabled: !logDownloadController.requestingList && !logDownloadController.downloadingLogs && (logDownloadController.model.count > 0)
                     text: qsTr("Erase All")
-                    onClicked: QGroundControl.showMessageDialog(
-                        logDownloadPage,
+                    onClicked: mainWindow.showMessageDialog(
                         qsTr("Delete All Log Files"),
                         qsTr("All log files will be erased permanently. Is this really what you want?"),
                         Dialog.Yes | Dialog.No,
-                        function() { LogDownloadController.eraseAll() }
+                        function() { logDownloadController.eraseAll() }
                     )
                 }
 
                 QGCButton {
                     Layout.fillWidth: true
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.5
                     text: qsTr("Cancel")
-                    enabled: LogDownloadController.requestingList || LogDownloadController.downloadingLogs
-                    onClicked: LogDownloadController.cancel()
+                    enabled: logDownloadController.requestingList || logDownloadController.downloadingLogs
+                    onClicked: logDownloadController.cancel()
                 }
             }
         }

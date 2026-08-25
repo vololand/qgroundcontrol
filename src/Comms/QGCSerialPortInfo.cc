@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "QGCSerialPortInfo.h"
 
 #include "JsonHelper.h"
@@ -8,7 +17,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 
-QGC_LOGGING_CATEGORY(QGCSerialPortInfoLog, "Comms.QGCSerialPortInfo")
+QGC_LOGGING_CATEGORY(QGCSerialPortInfoLog, "qgc.comms.qgcserialportinfo")
 
 bool QGCSerialPortInfo::_jsonLoaded = false;
 bool QGCSerialPortInfo::_jsonDataValid = false;
@@ -19,18 +28,18 @@ QList<QGCSerialPortInfo::BoardRegExpFallback_t> QGCSerialPortInfo::_boardManufac
 QGCSerialPortInfo::QGCSerialPortInfo()
     : QSerialPortInfo()
 {
-    qCDebug(QGCSerialPortInfoLog) << this;
+    // qCDebug(QGCSerialPortInfoLog) << Q_FUNC_INFO << this;
 }
 
 QGCSerialPortInfo::QGCSerialPortInfo(const QSerialPort &port)
     : QSerialPortInfo(port)
 {
-    qCDebug(QGCSerialPortInfoLog) << this;
+    // qCDebug(QGCSerialPortInfoLog) << Q_FUNC_INFO << this;
 }
 
 QGCSerialPortInfo::~QGCSerialPortInfo()
 {
-    qCDebug(QGCSerialPortInfoLog) << this;
+    // qCDebug(QGCSerialPortInfoLog) << Q_FUNC_INFO << this;
 }
 
 bool QGCSerialPortInfo::_loadJsonData()
@@ -288,8 +297,6 @@ bool QGCSerialPortInfo::isSystemPort(const QSerialPortInfo &port)
             return true;
         }
     }
-#else
-    Q_UNUSED(port);
 #endif
 
     // TODO: Add Linux (LTE modems, etc) and Windows as needed

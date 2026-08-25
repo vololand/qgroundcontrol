@@ -1,162 +1,47 @@
 <#
 .SYNOPSIS
-    Install GStreamer (x64 only) and the latest Vulkan SDK on Windows.
+    Download and install GStreamer runtime & devel on Windows.
 
 .DESCRIPTION
-    - In CI (GitHub Actions): runs without elevation, uses GITHUB_ENV for env vars.
-    - Locally: requires elevation, sets machine-level environment variables.
-    - Downloads installers to $env:TEMP and removes them afterwards.
-
-.PARAMETER SkipVulkan
-    Skip Vulkan SDK installation.
-
-.PARAMETER GStreamerVersion
-    Override GStreamer version (default: from build-config.json).
+    - Must be run as Administrator.
+    - Downloads the runtime & dev MSIs from your S3 bucket into $env:TEMP.
+    - Installs both with msiexec in passive mode, adding all components.
+    - Cleans up the downloaded files.
 #>
-param(
-    [switch]$SkipVulkan,
-    [string]$GStreamerVersion
-)
 
-# ────────────────────────────────
-# 0) Detect CI environment
-# ────────────────────────────────
-$isCI = $env:CI -eq 'true' -or $env:GITHUB_ACTIONS -eq 'true'
-
-# ────────────────────────────────
-# 1) Source build config
-# ────────────────────────────────
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$configScript = Join-Path $scriptDir "read-config.ps1"
-if (Test-Path $configScript) {
-    . $configScript
-} else {
-    Write-Error "read-config.ps1 not found"
-    exit 1
+# Ensure we’re running elevated
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+        [Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script must be run as Administrator. Relaunching..."
+    Start-Process -FilePath pwsh.exe -Verb RunAs -ArgumentList "-NoProfile","-ExecutionPolicy Bypass","-File `"$PSCommandPath`""
+    exit
 }
 
-# Use parameter override or environment variable
-if ($GStreamerVersion) {
-    $gstVersion = $GStreamerVersion
-} elseif ($env:GSTREAMER_WINDOWS_VERSION) {
-    $gstVersion = $env:GSTREAMER_WINDOWS_VERSION
-} else {
-    Write-Error "GStreamer version not specified (use -GStreamerVersion or check build-config.json)"
-    exit 1
-}
+# Configuration
+$version = "1.22.12"
+$baseUrl = "https://gstreamer.freedesktop.org/data/pkg/windows/1.22.12/msvc"
+$tempDir = $env:TEMP
 
-# ────────────────────────────────
-# 2) Elevation (local only)
-# ────────────────────────────────
-if (-not $isCI) {
-    if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
-        ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Write-Warning "Restarting with Administrator privileges..."
-        Start-Process pwsh.exe -Verb RunAs -ArgumentList "-NoProfile","-ExecutionPolicy Bypass","-File `"$PSCommandPath`""
-        exit
-    }
-}
+$runtimeMsi = Join-Path $tempDir "gstreamer-1.0-msvc-x86_64-$version.msi"
+$develMsi   = Join-Path $tempDir "gstreamer-1.0-devel-msvc-x86_64-$version.msi"
 
-$ErrorActionPreference = 'Stop'
-$tempDir   = $env:TEMP
-$arch      = $env:PROCESSOR_ARCHITECTURE     # AMD64 | ARM64 | x86
-Write-Host "`n==> Detected architecture: $arch"
+# Download
+Write-Host "Downloading GStreamer $version runtime..."
+Invoke-WebRequest -Uri "$baseUrl/gstreamer-1.0-msvc-x86_64-$version.msi" -OutFile $runtimeMsi
 
-# ────────────────────────────────
-# 3) GStreamer config (x64 only)
-# ────────────────────────────────
-# Note: Must use QtMultimedia VideoReceiver or build GStreamer manually for Arm64
-$installGst = $arch -eq 'AMD64'
-if ($installGst) {
-    $gstInstallDir = 'C:\gstreamer'  # MSI INSTALLDIR (root)
-    $gstPrefix     = 'C:\gstreamer\1.0\msvc_x86_64'  # Actual path after install
-    # We now download from S3 because the official GStreamer site is unreliable
-    $gstBaseUrl    = "https://qgroundcontrol.s3.us-west-2.amazonaws.com/dependencies/gstreamer/windows/$gstVersion"
-    $gstRuntime    = Join-Path $tempDir 'gstreamer-runtime.msi'
-    $gstDevel      = Join-Path $tempDir 'gstreamer-devel.msi'
-}
+Write-Host "Downloading GStreamer $version devel..."
+Invoke-WebRequest -Uri "$baseUrl/gstreamer-1.0-devel-msvc-x86_64-$version.msi" -OutFile $develMsi
 
-# ────────────────────────────────
-# 4) Vulkan config (all arch, optional)
-# ────────────────────────────────
-$installVulkan = -not $SkipVulkan
-if ($installVulkan) {
-    $vulkanInstaller  = Join-Path $tempDir 'vulkan-sdk.exe'
-    $vulkanInstallDir = 'C:\VulkanSDK\latest'
-    $vulkanUrl        = 'https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-sdk.exe'
-}
+# Install
+Write-Host "Installing GStreamer runtime..."
+Start-Process msiexec.exe -ArgumentList "/i `"$runtimeMsi`" /passive ADDLOCAL=ALL" -Wait
 
-# Helper function to set environment variables (CI vs local)
-function Set-EnvVar {
-    param([string]$Name, [string]$Value)
-    if ($isCI) {
-        # GitHub Actions: append to GITHUB_ENV
-        "$Name=$Value" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-        # Also set for current process
-        [Environment]::SetEnvironmentVariable($Name, $Value, 'Process')
-    } else {
-        # Local: set machine-level
-        [Environment]::SetEnvironmentVariable($Name, $Value, 'Machine')
-    }
-}
+Write-Host "Installing GStreamer devel..."
+Start-Process msiexec.exe -ArgumentList "/i `"$develMsi`" /passive ADDLOCAL=ALL" -Wait
 
-function Add-ToPath {
-    param([string]$PathToAdd)
-    if ($isCI) {
-        $PathToAdd | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-    } else {
-        $envPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
-        if ($envPath -notmatch [regex]::Escape($PathToAdd)) {
-            [Environment]::SetEnvironmentVariable('Path', "$envPath;$PathToAdd", 'Machine')
-        }
-    }
-}
+# Cleanup
+Write-Host "Removing installer files..."
+Remove-Item $runtimeMsi, $develMsi -ErrorAction SilentlyContinue
 
-# ────────────────────────────────
-# 5) Download + install GStreamer
-# ────────────────────────────────
-if ($installGst) {
-    Write-Host "`n==> Downloading GStreamer version $gstVersion from $gstBaseUrl"
-    Invoke-WebRequest "$gstBaseUrl/gstreamer-1.0-msvc-x86_64-$gstVersion.msi" -OutFile $gstRuntime
-    Invoke-WebRequest "$gstBaseUrl/gstreamer-1.0-devel-msvc-x86_64-$gstVersion.msi" -OutFile $gstDevel
-
-    Write-Host "==> Installing GStreamer runtime..."
-    Start-Process msiexec.exe -ArgumentList "/i `"$gstRuntime`" /passive INSTALLDIR=`"$gstInstallDir`" ADDLOCAL=ALL" -Wait
-    Write-Host "==> Installing GStreamer devel..."
-    Start-Process msiexec.exe -ArgumentList "/i `"$gstDevel`" /passive INSTALLDIR=`"$gstInstallDir`" ADDLOCAL=ALL" -Wait
-
-    # Environment
-    Set-EnvVar 'GSTREAMER_1_0_ROOT_MSVC_X86_64' $gstPrefix
-    Set-EnvVar 'GSTREAMER_1_0_ROOT_X86_64' $gstPrefix
-    Add-ToPath "$gstPrefix\bin"
-}
-
-# ────────────────────────────────
-# 6) Download + install Vulkan SDK
-# ────────────────────────────────
-if ($installVulkan) {
-    Write-Host "`n==> Downloading Vulkan SDK..."
-    Invoke-WebRequest $vulkanUrl -OutFile $vulkanInstaller
-
-    Write-Host "==> Installing Vulkan SDK to $vulkanInstallDir..."
-    Start-Process $vulkanInstaller `
-        -ArgumentList "--root `"$vulkanInstallDir`" --accept-licenses --default-answer --confirm-command install com.lunarg.vulkan.glm com.lunarg.vulkan.volk com.lunarg.vulkan.vma com.lunarg.vulkan.debug" `
-        -NoNewWindow -Wait
-
-    Set-EnvVar 'VULKAN_SDK' $vulkanInstallDir
-    Add-ToPath "$vulkanInstallDir\Bin"
-}
-
-# ────────────────────────────────
-# 7) Cleanup
-# ────────────────────────────────
-Write-Host "`n==> Cleaning up installers..."
-if ($installGst) { Remove-Item $gstRuntime, $gstDevel -ErrorAction SilentlyContinue }
-if ($installVulkan) { Remove-Item $vulkanInstaller -ErrorAction SilentlyContinue }
-
-# ────────────────────────────────
-# 8) Done
-# ────────────────────────────────
-Write-Host "`nDependencies installed!"
-if ($installGst) { Write-Host "  - GStreamer $gstVersion (verify: gst-launch-1.0 --version)" }
-if ($installVulkan) { Write-Host "  - Vulkan SDK (verify: vulkaninfo)" }
+Write-Host "`n✅ GStreamer $version installed!"
+Write-Host "You can verify with: gst-launch-1.0 --version"

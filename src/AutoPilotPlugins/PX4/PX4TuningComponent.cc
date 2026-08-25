@@ -1,3 +1,13 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 #include "PX4TuningComponent.h"
 #include "QGCMAVLink.h"
 #include "Vehicle.h"
@@ -62,10 +72,6 @@ QUrl PX4TuningComponent::setupSource(void) const
         case MAV_TYPE_VTOL_TILTWING:
         case MAV_TYPE_VTOL_RESERVED5:
             qmlFile = "qrc:/qml/QGroundControl/AutoPilotPlugins/PX4/PX4TuningComponentVTOL.qml";
-            break;
-        case MAV_TYPE_SPACECRAFT_ORBITER:
-            // Spacecraft Type
-            qmlFile = "qrc:/qml/QGroundControl/AutoPilotPlugins/PX4/PX4TuningComponentSpacecraft.qml";
             break;
         default:
             break;

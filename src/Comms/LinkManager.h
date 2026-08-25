@@ -1,11 +1,17 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QList>
 #include <QtCore/QLoggingCategory>
-#include <QtCore/QMutex>
-#include <QtCore/QMutexLocker>
 #include <QtCore/QStringList>
-#include <QtQmlIntegration/QtQmlIntegration>
 
 #include <limits>
 
@@ -34,10 +40,7 @@ class UdpIODevice;
 class LinkManager : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
     Q_MOC_INCLUDE("QmlObjectListModel.h")
-    Q_MOC_INCLUDE("LogReplayLink.h")
     Q_PROPERTY(bool isBluetoothAvailable READ isBluetoothAvailable NOTIFY isBluetoothAvailableChanged)
     Q_PROPERTY(QmlObjectListModel *linkConfigurations READ _qmlLinkConfigurations CONSTANT)
     Q_PROPERTY(QStringList linkTypeStrings READ linkTypeStrings CONSTANT)
@@ -48,6 +51,7 @@ public:
     ~LinkManager();
 
     static LinkManager *instance();
+    static void registerQmlTypes();
 
     void init();
 
@@ -65,7 +69,7 @@ public:
     Q_INVOKABLE void shutdown();
     Q_INVOKABLE LogReplayLink *startLogReplay(const QString &logFile);
 
-    QList<SharedLinkInterfacePtr> links();
+    QList<SharedLinkInterfacePtr> links() { return _rgLinks; }
     QStringList linkTypeStrings() const;
     bool mavlinkSupportForwardingEnabled() const { return _mavlinkSupportForwardingEnabled; }
 
@@ -102,7 +106,7 @@ public:
     /// by using this method to get access to the shared pointer.
     SharedLinkInterfacePtr sharedLinkInterfacePointerForLink(const LinkInterface *link);
 
-    bool containsLink(const LinkInterface *link);
+    bool containsLink(const LinkInterface *link) const;
 
     SharedLinkConfigurationPtr addConfiguration(LinkConfiguration *config);
 
@@ -146,7 +150,6 @@ private:
     uint32_t _mavlinkChannelsUsedBitMask = 1;
     QString _connectionsSuspendedReason;            ///< User visible reason for suspension
 
-    QMutex _linksMutex;                             ///< Protects _rgLinks access from multiple threads
     QList<SharedLinkInterfacePtr> _rgLinks;
     QList<SharedLinkConfigurationPtr> _rgLinkConfigs;
 
@@ -178,11 +181,11 @@ signals:
     void commPortsChanged();
 
 private:
-    bool _isSerialPortConnected();
+    bool _isSerialPortConnected() const;
     void _updateSerialPorts();
     bool _allowAutoConnectToBoard(QGCSerialPortInfo::BoardType_t boardType) const;
     void _addSerialAutoConnectLink();
-    bool _portAlreadyConnected(const QString &portName);
+    bool _portAlreadyConnected(const QString &portName) const;
     void _filterCompositePorts(QList<QGCSerialPortInfo> &portList);
 
     UdpIODevice *_nmeaSocket = nullptr;

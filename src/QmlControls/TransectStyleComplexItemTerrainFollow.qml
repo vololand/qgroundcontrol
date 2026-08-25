@@ -3,7 +3,9 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.ScreenTools
 import QGroundControl.Controls
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 
 ColumnLayout {
@@ -26,13 +28,7 @@ ColumnLayout {
             if (!QGroundControl.corePlugin.options.showMissionAbsoluteAltitude || !_missionItem.cameraCalc.isManualCamera) {
                 removeModes.push(QGroundControl.AltitudeModeAbsolute)
             }
-            altModeDialogFactory.open({ rgRemoveModes: removeModes, updateAltModeFn: updateFunction })
-        }
-
-        QGCPopupDialogFactory {
-            id: altModeDialogFactory
-
-            dialogComponent: altModeDialogComponent
+            altModeDialogComponent.createObject(mainWindow, { rgRemoveModes: removeModes, updateAltModeFn: updateFunction }).open()
         }
 
         Component { id: altModeDialogComponent; AltModeDialog { } }

@@ -7,6 +7,7 @@ qt_add_qml_module(AppSettingsModule
     QML_FILES
         ADSBServerSettings.qml
         BluetoothSettings.qml
+        CryptoSettings.qml
         DebugWindow.qml
         FlyViewSettings.qml
         GeneralSettings.qml
@@ -14,19 +15,19 @@ qt_add_qml_module(AppSettingsModule
         LinkSettings.qml
         LogReplaySettings.qml
         MapSettings.qml
-        NTRIPSettings.qml
         MockLink.qml
         MockLinkSettings.qml
         PlanViewSettings.qml
         PX4LogTransferSettings.qml
-        QmlTest.qml
         RemoteIDSettings.qml
         SerialSettings.qml
+        ServerSettings.qml
         SettingsPage.qml
         SettingsPagesModel.qml
         TcpSettings.qml
         TelemetrySettings.qml
         UdpSettings.qml
         VideoSettings.qml
-    NO_PLUGIN
+        VideoCryptoSettings.qml
+    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
 )

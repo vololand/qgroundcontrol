@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "TakeoffMissionItem.h"
 #include "MissionCommandTree.h"
 #include "QGroundControlQmlGlobal.h"
@@ -9,23 +18,23 @@
 #include "Vehicle.h"
 
 TakeoffMissionItem::TakeoffMissionItem(PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad)
-    : SimpleMissionItem(masterController, flyView, forLoad)
-    , _settingsItem(settingsItem)
+    : SimpleMissionItem (masterController, flyView, forLoad)
+    , _settingsItem     (settingsItem)
 {
     _init(forLoad);
 }
 
 TakeoffMissionItem::TakeoffMissionItem(MAV_CMD takeoffCmd, PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad)
-    : SimpleMissionItem(masterController, flyView, false /* forLoad */)
-    , _settingsItem(settingsItem)
+    : SimpleMissionItem (masterController, flyView, false /* forLoad */)
+    , _settingsItem     (settingsItem)
 {
     setCommand(takeoffCmd);
     _init(forLoad);
 }
 
 TakeoffMissionItem::TakeoffMissionItem(const MissionItem& missionItem, PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad)
-    : SimpleMissionItem(masterController, flyView, missionItem)
-    , _settingsItem(settingsItem)
+    : SimpleMissionItem (masterController, flyView, missionItem)
+    , _settingsItem     (settingsItem)
 {
     _init(forLoad);
 }
@@ -77,12 +86,12 @@ void TakeoffMissionItem::_init(bool forLoad)
     setDirty(false);
 }
 
-void TakeoffMissionItem::_setLaunchTakeoffAtSameLocation(bool launchTakeoffAtSameLocation)
+void TakeoffMissionItem::setLaunchTakeoffAtSameLocation(bool launchTakeoffAtSameLocation)
 {
     if (launchTakeoffAtSameLocation != _launchTakeoffAtSameLocation) {
         _launchTakeoffAtSameLocation = launchTakeoffAtSameLocation;
         if (_launchTakeoffAtSameLocation) {
-            _setLaunchCoordinate(coordinate());
+            setLaunchCoordinate(coordinate());
         }
         emit launchTakeoffAtSameLocationChanged(_launchTakeoffAtSameLocation);
         setDirty(true);
@@ -113,20 +122,20 @@ void TakeoffMissionItem::_initLaunchTakeoffAtSameLocation(void)
 {
     if (specifiesCoordinate()) {
         if (_controllerVehicle->fixedWing() || _controllerVehicle->vtol()) {
-            _setLaunchTakeoffAtSameLocation(false);
+            setLaunchTakeoffAtSameLocation(false);
         } else {
             // PX4 specifies a coordinate for takeoff even for multi-rotor. But it makes more sense to not have a coordinate
             // from and end user standpoint. So even for PX4 we try to keep launch and takeoff at the same position. Unless the
             // user has moved/loaded launch at a different location than takeoff.
             if (coordinate().isValid() && _settingsItem->coordinate().isValid()) {
-                _setLaunchTakeoffAtSameLocation(coordinate().latitude() == _settingsItem->coordinate().latitude() && coordinate().longitude() == _settingsItem->coordinate().longitude());
+                setLaunchTakeoffAtSameLocation(coordinate().latitude() == _settingsItem->coordinate().latitude() && coordinate().longitude() == _settingsItem->coordinate().longitude());
             } else {
-                _setLaunchTakeoffAtSameLocation(true);
+                setLaunchTakeoffAtSameLocation(true);
             }
 
         }
     } else {
-        _setLaunchTakeoffAtSameLocation(true);
+        setLaunchTakeoffAtSameLocation(true);
     }
 }
 
@@ -150,7 +159,7 @@ bool TakeoffMissionItem::load(const QJsonObject& json, int sequenceNumber, QStri
     return success;
 }
 
-void TakeoffMissionItem::_setLaunchCoordinate(const QGeoCoordinate& launchCoordinate)
+void TakeoffMissionItem::setLaunchCoordinate(const QGeoCoordinate& launchCoordinate)
 {
     if (!launchCoordinate.isValid()) {
         return;

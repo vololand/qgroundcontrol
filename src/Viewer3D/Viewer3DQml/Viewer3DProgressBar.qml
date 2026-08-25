@@ -1,61 +1,64 @@
-import QGroundControl
-import QGroundControl.Controls
+import QtQuick
+import QtQuick.Controls
 
-Rectangle {
+import QGroundControl
+import QGroundControl.Controllers
+import QGroundControl.Controls
+import QGroundControl.FlightDisplay
+import QGroundControl.FlightMap
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
+
+///     @author Omid Esrafilian <esrafilian.omid@gmail.com>
+
+
+Rectangle{
     id: progressBody
 
-    property string progressText: qsTr("Progress")
     property real progressValue: 100.0
+    property string progressText: qsTr("Progress")
 
-    color: qgcPal.windowShadeDark
+    QGCPalette { id: qgcPal; colorGroupEnabled: true }
+
+    width:          ScreenTools.screenWidth * 0.2
     height: _progressCol.height + 2 * ScreenTools.defaultFontPixelWidth
-    opacity: (progressValue < 100) ? (1.0) : (0.0)
+
     radius: ScreenTools.defaultFontPixelWidth * 2
-    visible: opacity > 0
-    width: ScreenTools.screenWidth * 0.2
+    color: qgcPal.windowShadeDark
+
+    visible: progressValue < 100.0
+    opacity:  (progressValue < 100)?(1.0):(0.0)
 
     Behavior on opacity {
-        NumberAnimation {
-            duration: 300
-        }
+        NumberAnimation { duration: 300 }
     }
 
-    QGCPalette {
-        id: qgcPal
-
-        colorGroupEnabled: true
-    }
-
-    Column {
+    Column{
         id: _progressCol
-
-        anchors {
-            left: parent.left
-            right: parent.right
+        anchors{
             verticalCenter: parent.verticalCenter
+            right: parent.right
+            left: parent.left
         }
-
         ProgressBar {
             id: _progressBar
-
-            from: 0
-            to: 100
-            value: progressBody.progressValue
-
-            anchors {
+            anchors{
+                right: parent.right
                 left: parent.left
                 margins: ScreenTools.defaultFontPixelWidth
-                right: parent.right
             }
+            from:           0
+            to:             100
+            value:          progressBody.progressValue
         }
 
         QGCLabel {
             anchors.horizontalCenter: parent.horizontalCenter
-            color: qgcPal.text
-            font.bold: true
-            font.pointSize: ScreenTools.mediumFontPointSize
-            horizontalAlignment: Text.AlignHCenter
-            text: progressText + Number(Math.floor(progressBody.progressValue)) + " %"
+            text:                progressText + Number(Math.floor(progressBody.progressValue)) + " %"
+            color:              qgcPal.text
+            font.bold:          true
+            font.pointSize:     ScreenTools.mediumFontPointSize
+            horizontalAlignment:Text.AlignHCenter
         }
     }
 }

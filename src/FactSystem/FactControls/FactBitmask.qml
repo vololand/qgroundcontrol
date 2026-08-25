@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 
-import QGroundControl
+import QGroundControl.FactSystem
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
 
 Flow {
     spacing: ScreenTools.defaultFontPixelWidth

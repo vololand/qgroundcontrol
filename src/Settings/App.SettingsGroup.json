@@ -77,9 +77,7 @@
     "default":     50.0,
     "min":              0.0,
     "units":            "m",
-    "decimalPlaces":    1,
-    "userMin":          0.0,
-    "userMax":          121.92
+    "decimalPlaces":    1
 },
 {
     "name":             "audioMuted",
@@ -167,19 +165,12 @@
     "default":     ""
 },
 {
-    "name":                 "androidDontSaveToSDCard",
-    "shortDesc":            "Don't save to SD card, even if available",
-    "longDesc":             "If this option is enabled, application data will not be saved to the SD card.",
+    "name":                 "androidSaveToSDCard",
+    "shortDesc":            "Save to SD card",
+    "longDesc":             "Application data is saved to the sd card",
     "type":                 "bool",
     "default":              false,
     "qgcRebootRequired":    true
-},
-{
-    "name":             "tiandituToken",
-    "shortDesc": "Access token to TianDiTu maps",
-    "longDesc":  "Your personal access token for TianDiTu maps",
-    "type":             "string",
-    "default":     ""
 },
 {
     "name":             "mapboxToken",
@@ -224,13 +215,6 @@
     "default":     ""
 },
 {
-    "name":             "openaipToken",
-    "shortDesc": "OpenAIP API Key",
-    "longDesc":  "Your personal API key for OpenAIP aviation maps. Get one at https://www.openaip.net",
-    "type":             "string",
-    "default":     ""
-},
-{
     "name":             "followTarget",
     "shortDesc": "Stream GCS' coordinates to Autopilot",
     "type":             "uint32",
@@ -258,6 +242,25 @@
     "shortDesc": "Comma separated list of first run prompt ids which have already been shown.",
     "type":             "string",
     "default":     ""
+},
+{
+    "name": "loginAirLink",
+    "shortDesc": "AirLink User Name",
+    "type": "string",
+    "default": ""
+},
+{
+    "name": "passAirLink",
+    "shortDesc": "AirLink Password",
+    "type": "string",
+    "default": ""
+},
+{
+    "name":             "panelWidthsLinked",
+    "shortDesc":        "Link left/right side panel widths",
+    "longDesc":         "When enabled, resizing either side panel applies the same width to both panels.",
+    "type":             "bool",
+    "default":          false
 }
 ]
 }

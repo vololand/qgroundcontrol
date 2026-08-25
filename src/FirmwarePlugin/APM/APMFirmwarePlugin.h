@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include "FirmwarePlugin.h"
@@ -38,7 +47,7 @@ public:
     QStringList flightModes(Vehicle *vehicle) const override;
     QString flightMode(uint8_t base_mode, uint32_t custom_mode) const override;
     bool setFlightMode(const QString &flightMode, uint8_t *base_mode, uint32_t *custom_mode) const override;
-    bool MAV_CMD_DO_SET_MODE_is_supported() const override { return true; }
+    bool MAV_CMD_DO_SET_MODE_is_supported() const override { return false; }
     bool isGuidedMode(const Vehicle *vehicle) const override;
     QString gotoFlightMode() const override { return guidedFlightMode(); }
     QString rtlFlightMode() const override;
@@ -68,8 +77,8 @@ public:
     double minimumEquivalentAirspeed(Vehicle *vehicle) const override;
     bool fixedWingAirSpeedLimitsAvailable(Vehicle *vehicle) const override;
     void guidedModeChangeEquivalentAirspeedMetersSecond(Vehicle* vehicle, double airspeed_equiv) const override;
+    QVariant mainStatusIndicatorContentItem(const Vehicle* vehicle) const override;
     void sendGCSMotionReport(Vehicle *vehicle, const FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities) const override;
-    QVariant expandedToolbarIndicatorSource  (const Vehicle* vehicle, const QString& indicatorName) const override;
 
     // support for changing speed in Copter guide mode:
     bool mulirotorSpeedLimitsAvailable(Vehicle *vehicle) const override;
@@ -130,15 +139,6 @@ private:
 
     static uint8_t _reencodeMavlinkChannel();
     static QMutex &_reencodeMavlinkChannelMutex();
-
-    struct FirmwareParameterHeader {
-        MAV_AUTOPILOT firmwareType = MAV_AUTOPILOT_GENERIC;
-        MAV_TYPE vehicleType = MAV_TYPE_GENERIC;
-        QVersionNumber versionNumber;
-        FIRMWARE_VERSION_TYPE versionType;
-        QString gitRevision;
-    };
-    static FirmwareParameterHeader _parseParamsHeader(const QString &filePath);
 };
 
 /*===========================================================================*/

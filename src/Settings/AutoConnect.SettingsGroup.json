@@ -15,7 +15,7 @@
     "shortDesc": "Automatically connect to a Pixhawk board",
     "longDesc":  "If this option is enabled GroundControl will automatically connect to a Pixhawk board which is connected via USB.",
     "type":             "bool",
-    "default":     true
+    "default":     false
 },
 {
     "name":             "autoConnectSiKRadio",

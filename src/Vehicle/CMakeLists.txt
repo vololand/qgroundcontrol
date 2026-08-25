@@ -1,14 +1,7 @@
-# ============================================================================
-# Vehicle Module
-# Core vehicle state management and MAVLink communication
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         Autotune.cpp
         Autotune.h
-        FTPController.cc
-        FTPController.h
         FTPManager.cc
         FTPManager.h
         InitialConnectStateMachine.cc
@@ -35,9 +28,15 @@ target_sources(${CMAKE_PROJECT_NAME}
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# ----------------------------------------------------------------------------
-# Vehicle Subsystems
-# ----------------------------------------------------------------------------
+qt_add_library(VehicleModule STATIC)
+
+qt_add_qml_module(VehicleModule
+    URI QGroundControl.Vehicle
+    VERSION 1.0
+    RESOURCE_PREFIX /qml
+    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
+)
+
 add_subdirectory(Actuators)
 add_subdirectory(ComponentInformation)
 add_subdirectory(FactGroups)

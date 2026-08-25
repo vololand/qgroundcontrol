@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtLocation
 import QtPositioning
@@ -39,8 +48,6 @@ Item {
 
     Component.onCompleted: {
         _missionLineViewComponent = missionLineViewComponent.createObject(map)
-        if (_missionLineViewComponent.status === Component.Error)
-            console.log(_missionLineViewComponent.errorString())
         map.addMapItemGroup(_missionLineViewComponent)
     }
 

@@ -1,3 +1,13 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 #include "QGCFileDialogController.h"
 #include "QGCLoggingCategory.h"
 #include "SettingsManager.h"
@@ -5,17 +15,17 @@
 
 #include <QtCore/QDir>
 
-QGC_LOGGING_CATEGORY(QGCFileDialogControllerLog, "QMLControls.QGCFileDialogController")
+QGC_LOGGING_CATEGORY(QGCFileDialogControllerLog, "qgc.qmlcontrols.qgcfiledialogcontroller")
 
 QGCFileDialogController::QGCFileDialogController(QObject *parent)
     : QObject(parent)
 {
-    qCDebug(QGCFileDialogControllerLog) << this;
+    // qCDebug(QGCFileDialogControllerLog) << Q_FUNC_INFO << this;
 }
 
 QGCFileDialogController::~QGCFileDialogController()
 {
-    qCDebug(QGCFileDialogControllerLog) << this;
+    // qCDebug(QGCFileDialogControllerLog) << Q_FUNC_INFO << this;
 }
 
 QStringList QGCFileDialogController::getFiles(const QString &directoryPath, const QStringList &nameFilters)

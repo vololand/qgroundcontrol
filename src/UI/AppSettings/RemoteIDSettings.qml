@@ -1,11 +1,24 @@
+/****************************************************************************
+ *
+ * (c) 2009-2022 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.MultiVehicleManager
+import QGroundControl.Palette
 
 SettingsPage {
 
@@ -46,6 +59,22 @@ SettingsPage {
     property bool isFAARegion:          regionFact.rawValue === RemoteIDSettings.RegionOperation.FAA
     property real textFieldWidth:       ScreenTools.defaultFontPixelWidth * 24
     property real textLabelWidth:       ScreenTools.defaultFontPixelWidth * 30
+
+    enum RegionOperation {
+        FAA,
+        EU
+    }
+
+    enum LocationType {
+        TAKEOFF,
+        LIVE,
+        FIXED
+    }
+
+    enum ClassificationType {
+        UNDEFINED,
+        EU
+    }
 
     // GPS properties
     property var    gcsPosition:        QGroundControl.qgcPositionManger.gcsPosition
@@ -220,10 +249,11 @@ SettingsPage {
 
         Connections {
             target: regionFact
-            function onRawValueChanged(value) {
-                if (value === RemoteIDSettings.RegionOperation.EU) {
+            onRawValueChanged: {
+                if (regionFact.rawValue === RemoteIDSettings.EU) {
                     sendOperatorIdFact.rawValue = true
-                } else if (value === RemoteIDSettings.RegionOperation.FAA) {
+                }
+                if (regionFact.rawValue === RemoteIDSettings.FAA) {
                     locationTypeFact.value = RemoteIDSettings.LocationType.LIVE
                 }
             }
@@ -360,14 +390,14 @@ SettingsPage {
                                 operatorIDTextField.clearValidationError(false /* preventViewSwitch */)
                             }
                         }
-
+                        
                         onTextChanged: {
+                            operatorIDFact.value = text
                             if (_activeVehicle) {
                                 _remoteIDManager.checkOperatorID(text)
                             } else {
                                 _offlineVehicle.remoteIDManager.checkOperatorID(text)
                             }
-                            operatorIDFact.value = text
                         }
 
                         onEditingFinished: {
@@ -498,7 +528,7 @@ SettingsPage {
                     visible:                    !ScreenTools.isMobile
                                                 && QGroundControl.settingsManager.autoConnectSettings.autoConnectNmeaPort.visible
                                                 && QGroundControl.settingsManager.autoConnectSettings.autoConnectNmeaBaud.visible
-                                                && _locationType !== RemoteIDSettings.LocationType.TAKEOFF
+                                                && _locationType !== RemoteIDIndicatorPage.LocationType.TAKEOFF
                     anchors.margins:            _margins
                     rowSpacing:                 _margins * 3
                     columns:                    2

@@ -1,3 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
+/// @file
+///     @author Don Gagne <don@thegagnes.com>
+
 #include "GeoFenceController.h"
 #include "Vehicle.h"
 #include "ParameterManager.h"
@@ -13,7 +26,7 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 
-QGC_LOGGING_CATEGORY(GeoFenceControllerLog, "PlanManager.GeoFenceController")
+QGC_LOGGING_CATEGORY(GeoFenceControllerLog, "GeoFenceControllerLog")
 
 QMap<QString, FactMetaData*> GeoFenceController::_metaDataMap;
 
@@ -31,8 +44,8 @@ GeoFenceController::GeoFenceController(PlanMasterController* masterController, Q
     _breachReturnAltitudeFact.setMetaData(_metaDataMap[_breachReturnAltitudeFactName]);
     _breachReturnAltitudeFact.setRawValue(_breachReturnDefaultAltitude);
 
-    connect(&_polygons, &QmlObjectListModel::countChanged, this, &GeoFenceController::containsItemsChanged);
-    connect(&_circles,  &QmlObjectListModel::countChanged, this, &GeoFenceController::containsItemsChanged);
+    connect(&_polygons, &QmlObjectListModel::countChanged, this, &GeoFenceController::_updateContainsItems);
+    connect(&_circles,  &QmlObjectListModel::countChanged, this, &GeoFenceController::_updateContainsItems);
 
     connect(this,                       &GeoFenceController::breachReturnPointChanged,  this, &GeoFenceController::_setDirty);
     connect(&_breachReturnAltitudeFact, &Fact::rawValueChanged,                         this, &GeoFenceController::_setDirty);
@@ -92,8 +105,14 @@ void GeoFenceController::_managerVehicleChanged(Vehicle* managerVehicle)
     connect(_geoFenceManager, &GeoFenceManager::removeAllComplete,              this, &GeoFenceController::_managerRemoveAllComplete);
     connect(_geoFenceManager, &GeoFenceManager::inProgressChanged,              this, &GeoFenceController::syncInProgressChanged);
 
+    //-- GeoFenceController::supported() tests both the capability bit AND the protocol version.
     (void) connect(_managerVehicle, &Vehicle::capabilityBitsChanged, this, [this](uint64_t capabilityBits) {
         Q_UNUSED(capabilityBits);
+        emit supportedChanged(supported());
+    });
+
+    (void) connect(_managerVehicle, &Vehicle::requestProtocolVersion, this, [this](unsigned version) {
+        Q_UNUSED(version);
         emit supportedChanged(supported());
     });
 
@@ -206,7 +225,7 @@ void GeoFenceController::save(QJsonObject& json)
 }
 
 void GeoFenceController::removeAll(void)
-{
+{    
     setBreachReturnPoint(QGeoCoordinate());
     _polygons.clearAndDeleteContents();
     _circles.clearAndDeleteContents();
@@ -353,6 +372,11 @@ bool GeoFenceController::containsItems(void) const
     return _polygons.count() > 0 || _circles.count() > 0;
 }
 
+void GeoFenceController::_updateContainsItems(void)
+{
+    emit containsItemsChanged(containsItems());
+}
+
 bool GeoFenceController::showPlanFromManagerVehicle(void)
 {
     qCDebug(GeoFenceControllerLog) << "showPlanFromManagerVehicle _flyView" << _flyView;
@@ -465,7 +489,7 @@ void GeoFenceController::clearAllInteractive(void)
 
 bool GeoFenceController::supported(void) const
 {
-    return _managerVehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE;
+    return (_managerVehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE) && (_managerVehicle->maxProtoVersion() >= 200);
 }
 
 /* Returns the radius of the "paramCircularFence"
@@ -572,3 +596,36 @@ bool GeoFenceController::isEmpty(void) const
     return _polygons.count() == 0 && _circles.count() == 0 && !_breachReturnPoint.isValid();
 
 }
+
+#ifdef QGC_UTM_ADAPTER
+void GeoFenceController::loadFlightPlanData()
+{
+    QJsonArray jsonPolygonArray;
+    QList<QGeoCoordinate> geoCoordinates ;
+
+    for (int i = 0; i < _polygons.count(); i++) {
+        QJsonObject jsonPolygon;
+        QGCFencePolygon* fencePolygon = _polygons.value<QGCFencePolygon*>(i);
+        fencePolygon->saveToJson(jsonPolygon);
+        jsonPolygonArray.append(jsonPolygon);
+    }
+    QJsonArray jsonArray = QJsonDocument::fromJson(QJsonDocument(jsonPolygonArray).toJson()).array();
+    QJsonObject jsonObject = jsonArray.at(0).toObject();
+    QJsonArray polygonArray = jsonObject.value("polygon").toArray();
+
+    for (int i = 0; i < polygonArray.size(); ++i) {
+        QJsonArray pointArray = polygonArray.at(i).toArray();
+        double latitude = pointArray.at(0).toDouble();
+        double longitude = pointArray.at(1).toDouble();
+        QGeoCoordinate geoCoordinate(latitude, longitude);
+        geoCoordinates.append(geoCoordinate);
+    }
+
+    // Append the first coordinate again to the end of the list
+    if (!geoCoordinates.isEmpty()) {
+        geoCoordinates.append(geoCoordinates.first());
+    }
+
+    emit polygonBoundarySent(geoCoordinates);
+}
+#endif

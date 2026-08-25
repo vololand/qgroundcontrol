@@ -1,8 +1,8 @@
 #pragma once
 
-#include "BaseClasses/VehicleTest.h"
+#include "UnitTest.h"
 
-class LogDownloadTest : public VehicleTest
+class LogDownloadTest : public UnitTest
 {
     Q_OBJECT
 

@@ -1,9 +1,20 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtLocation
 import QtPositioning
 
 import QGroundControl
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 import QGroundControl.Controls
 import QGroundControl.FlightMap
 
@@ -52,10 +63,6 @@ Item {
         topRightCoord =     centerCoord.atDistanceAndAzimuth(halfWidthMeters, 90).atDistanceAndAzimuth(halfHeightMeters, 0)
         bottomLeftCoord =   centerCoord.atDistanceAndAzimuth(halfWidthMeters, -90).atDistanceAndAzimuth(halfHeightMeters, 180)
         bottomRightCoord =  centerCoord.atDistanceAndAzimuth(halfWidthMeters, 90).atDistanceAndAzimuth(halfHeightMeters, 180)
-
-        console.log(map.center)
-        console.log(topLeftCoord)
-        console.log(bottomRightCoord)
 
         if (inclusionPolygon) {
             myGeoFenceController.addInclusion(topLeftCoord, bottomRightCoord)
@@ -126,8 +133,6 @@ Item {
             visible:        homePosition.isValid && _radius > 0
 
             property real _radius: myGeoFenceController.paramCircularFence
-
-            on_RadiusChanged: console.log("_radius", _radius, homePosition.isValid, homePosition)
         }
     }
 

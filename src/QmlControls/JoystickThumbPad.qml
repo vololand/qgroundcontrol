@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Controls
 
 import QGroundControl
-import QGroundControl.Controls
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
 
 Item {
     id:             _joyRoot
@@ -24,33 +25,33 @@ Item {
     property bool   calculateYAxisMutex:    true
     property real   stickPositionX:         _centerXY
     property real   stickPositionY:         !yAxisReCenter ? height : height / 2
-    property bool   alreadyCreated:          false
-
+    property bool   alredyCreated:          false
+    
     QGCMapPalette { id: mapPal }
 
     onStickPositionXChanged:            calculateXAxis()
     onStickPositionYChanged:            calculateYAxis()
     onYAxisPositiveRangeOnlyChanged:    calculateYAxis()
-    onYAxisReCenterChanged:             yAxisReCentered()
-
+    onYAxisReCenterChanged:             yAxisReCentered()     
+    
     function yAxisReCentered() {
         if( yAxisReCenter ) {
             yAxis = yAxisPositiveRangeOnly ? 0.5 : 0
             stickPositionY = _joyRoot.height / 2
         }
-        if( !alreadyCreated && !yAxisReCenter ) {
+        if( !alredyCreated && !yAxisReCenter ) {
             yAxis = yAxisPositiveRangeOnly ? 0 : -1
-            stickPositionY = _joyRoot.height
+            stickPositionY = _joyRoot.height            
         }
-        if ( alreadyCreated && !yAxisReCenter ){
+        if ( alredyCreated && !yAxisReCenter ){
             yAxis = yAxisPositiveRangeOnly ? 0.5 : 0
             stickPositionY = _joyRoot.height / 2
         }
-        alreadyCreated = true
+        alredyCreated = true
         return yAxis
     }
 
-    //We prevent Joystick to move while the screen is resizing
+    //We prevent Joystick to move while the screen is resizing 
     function resize( yPositionAfterResize ) {
         if(_joyRoot.height <= 0) {
             return;

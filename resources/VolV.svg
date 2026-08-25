@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 172" width="200" height="172">
+  <g fill="#FFD500">
+    <!-- Left arm: funnel top + tapering stem to the V point -->
+    <path d="M10 0 L88 0 L63 30 L97 160 L49 30 Z"/>
+    <!-- Right arm: mirrored -->
+    <path d="M190 0 L112 0 L137 30 L97 160 L151 30 Z"/>
+    <!-- Period -->
+    <circle cx="167" cy="156" r="13"/>
+  </g>
+</svg>

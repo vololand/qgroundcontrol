@@ -1,6 +1,15 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "LinkManager.h"
-#include "LogReplayLink.h"
-#include "QGCNetworkHelper.h"
+#include "DeviceInfo.h"
+#include "LogReplayLinkController.h"
 #include "MAVLinkProtocol.h"
 #include "MultiVehicleManager.h"
 #include "QGCApplication.h"
@@ -11,6 +20,7 @@
 #include "AutoConnectSettings.h"
 #include "TCPLink.h"
 #include "UDPLink.h"
+#include "EncryptedMavlinkLink.h"
 
 #ifdef QGC_ENABLE_BLUETOOTH
 #include "BluetoothLink.h"
@@ -28,6 +38,10 @@
 #include "MockLink.h"
 #endif
 
+#ifndef QGC_AIRLINK_DISABLED
+#include "AirLinkLink.h"
+#endif
+
 #ifdef QGC_ZEROCONF_ENABLED
 #include <qmdnsengine/browser.h>
 #include <qmdnsengine/cache.h>
@@ -36,11 +50,12 @@
 #include <qmdnsengine/service.h>
 #endif
 
-#include <QtCore/QApplicationStatic>
+#include <QtCore/qapplicationstatic.h>
 #include <QtCore/QTimer>
+#include <QtQml/qqml.h>
 
-QGC_LOGGING_CATEGORY(LinkManagerLog, "Comms.LinkManager")
-QGC_LOGGING_CATEGORY(LinkManagerVerboseLog, "Comms.LinkManager:verbose")
+QGC_LOGGING_CATEGORY(LinkManagerLog, "qgc.comms.linkmanager")
+QGC_LOGGING_CATEGORY(LinkManagerVerboseLog, "qgc.comms.linkmanager:verbose")
 
 Q_APPLICATION_STATIC(LinkManager, _linkManagerInstance);
 
@@ -52,23 +67,34 @@ LinkManager::LinkManager(QObject *parent)
     , _nmeaSocket(new UdpIODevice(this))
 #endif
 {
-    qCDebug(LinkManagerLog) << this;
+    // qCDebug(LinkManagerLog) << Q_FUNC_INFO << this;
+}
+
+LinkManager::~LinkManager()
+{
+    // qCDebug(LinkManagerLog) << Q_FUNC_INFO << this;
+}
+
+LinkManager *LinkManager::instance()
+{
+    return _linkManagerInstance();
+}
+
+void LinkManager::registerQmlTypes()
+{
+    (void) qmlRegisterUncreatableType<LinkManager>("QGroundControl",       1, 0, "LinkManager",         "Reference only");
+    (void) qmlRegisterUncreatableType<LinkConfiguration>("QGroundControl", 1, 0, "LinkConfiguration",   "Reference only");
+    (void) qmlRegisterUncreatableType<LinkInterface>("QGroundControl",     1, 0, "LinkInterface",       "Reference only");
+
+    (void) qmlRegisterUncreatableType<LinkInterface>("QGroundControl.Vehicle", 1, 0, "LinkInterface", "Reference only");
+    (void) qmlRegisterUncreatableType<LogReplayLink>("QGroundControl",         1, 0, "LogReplayLink", "Reference only");
+    (void) qmlRegisterType<LogReplayLinkController> ("QGroundControl",         1, 0, "LogReplayLinkController");
 
     (void) qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
     (void) qRegisterMetaType<LinkInterface*>("LinkInterface*");
 #ifndef QGC_NO_SERIAL_LINK
     (void) qRegisterMetaType<QGCSerialPortInfo>("QGCSerialPortInfo");
 #endif
-}
-
-LinkManager::~LinkManager()
-{
-    qCDebug(LinkManagerLog) << this;
-}
-
-LinkManager *LinkManager::instance()
-{
-    return _linkManagerInstance();
 }
 
 void LinkManager::init()
@@ -79,12 +105,6 @@ void LinkManager::init()
         (void) connect(_portListTimer, &QTimer::timeout, this, &LinkManager::_updateAutoConnectLinks);
         _portListTimer->start(_autoconnectUpdateTimerMSecs); // timeout must be long enough to get past bootloader on second pass
     }
-}
-
-QList<SharedLinkInterfacePtr> LinkManager::links()
-{
-    QMutexLocker locker(&_linksMutex);
-    return _rgLinks;
 }
 
 QmlObjectListModel *LinkManager::_qmlLinkConfigurations()
@@ -130,6 +150,14 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr &config)
         link = std::make_shared<MockLink>(config);
         break;
 #endif
+#ifndef QGC_AIRLINK_DISABLED
+    case LinkConfiguration::AirLink:
+        link = std::make_shared<AirLinkLink>(config);
+        break;
+#endif
+    case LinkConfiguration::TypeTngEncryptedTest:
+        link = std::make_shared<EncryptedMavlinkLink>(config);
+        break;
     case LinkConfiguration::TypeLast:
     default:
         break;
@@ -144,30 +172,23 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr &config)
         return false;
     }
 
-    // Set up signal connections before adding to list, so link is fully initialized
+    _rgLinks.append(link);
+    config->setLink(link);
+
     (void) connect(link.get(), &LinkInterface::communicationError, this, &LinkManager::_communicationError);
     (void) connect(link.get(), &LinkInterface::bytesReceived, MAVLinkProtocol::instance(), &MAVLinkProtocol::receiveBytes);
     (void) connect(link.get(), &LinkInterface::bytesSent, MAVLinkProtocol::instance(), &MAVLinkProtocol::logSentBytes);
     (void) connect(link.get(), &LinkInterface::disconnected, this, &LinkManager::_linkDisconnected);
 
     MAVLinkProtocol::instance()->resetMetadataForLink(link.get());
+    MAVLinkProtocol::instance()->setVersion(MAVLinkProtocol::instance()->getCurrentVersion());
 
-    // Try to connect before adding to active links list
     if (!link->_connect()) {
-        (void) disconnect(link.get(), &LinkInterface::communicationError, this, &LinkManager::_communicationError);
-        (void) disconnect(link.get(), &LinkInterface::bytesReceived, MAVLinkProtocol::instance(), &MAVLinkProtocol::receiveBytes);
-        (void) disconnect(link.get(), &LinkInterface::bytesSent, MAVLinkProtocol::instance(), &MAVLinkProtocol::logSentBytes);
-        (void) disconnect(link.get(), &LinkInterface::disconnected, this, &LinkManager::_linkDisconnected);
         link->_freeMavlinkChannel();
+        _rgLinks.removeAt(_rgLinks.indexOf(link));
         config->setLink(nullptr);
         return false;
     }
-
-    {
-        QMutexLocker locker(&_linksMutex);
-        _rgLinks.append(link);
-    }
-    config->setLink(link);
 
     return true;
 }
@@ -179,11 +200,9 @@ void LinkManager::_communicationError(const QString &title, const QString &error
 
 SharedLinkInterfacePtr LinkManager::mavlinkForwardingLink()
 {
-    QMutexLocker locker(&_linksMutex);
-
-    for (const SharedLinkInterfacePtr &link : _rgLinks) {
+    for (SharedLinkInterfacePtr &link : _rgLinks) {
         const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
-        if (linkConfig && (linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingLinkName)) {
+        if ((linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingLinkName)) {
             return link;
         }
     }
@@ -193,11 +212,9 @@ SharedLinkInterfacePtr LinkManager::mavlinkForwardingLink()
 
 SharedLinkInterfacePtr LinkManager::mavlinkForwardingSupportLink()
 {
-    QMutexLocker locker(&_linksMutex);
-
-    for (const SharedLinkInterfacePtr &link : _rgLinks) {
+    for (SharedLinkInterfacePtr &link : _rgLinks) {
         const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
-        if (linkConfig && (linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingSupportLinkName)) {
+        if ((linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingSupportLinkName)) {
             return link;
         }
     }
@@ -207,12 +224,7 @@ SharedLinkInterfacePtr LinkManager::mavlinkForwardingSupportLink()
 
 void LinkManager::disconnectAll()
 {
-    QList<SharedLinkInterfacePtr> links;
-    {
-        QMutexLocker locker(&_linksMutex);
-        links = _rgLinks;
-    }
-
+    const QList<SharedLinkInterfacePtr> links = _rgLinks;
     for (const SharedLinkInterfacePtr &sharedLink: links) {
         sharedLink->disconnect();
     }
@@ -222,57 +234,35 @@ void LinkManager::_linkDisconnected()
 {
     LinkInterface* const link = qobject_cast<LinkInterface*>(sender());
 
-    if (!link) {
+    if (!link || !containsLink(link)) {
         return;
     }
 
-    SharedLinkInterfacePtr linkToCleanup;
-    SharedLinkConfigurationPtr config;
-    {
-        QMutexLocker locker(&_linksMutex);
-
-        for (auto it = _rgLinks.begin(); it != _rgLinks.end(); ++it) {
-            if (it->get() == link) {
-                config = it->get()->linkConfiguration();
-                const QString linkName = config ? config->name() : QStringLiteral("<null config>");
-                qCDebug(LinkManagerLog) << linkName << "use_count:" << it->use_count();
-                linkToCleanup = *it;
-                (void) _rgLinks.erase(it);
-                break;
-            }
-        }
-    }
-
-    if (!linkToCleanup) {
-        qCDebug(LinkManagerLog) << "link already removed";
-        return;
-    }
-
-    if (config) {
-        config->setLink(nullptr);
-    }
-
-    (void) disconnect(link, &LinkInterface::communicationError, this, &LinkManager::_communicationError);
+    (void) disconnect(link, &LinkInterface::communicationError, qgcApp(), &QGCApplication::showAppMessage);
     (void) disconnect(link, &LinkInterface::bytesReceived, MAVLinkProtocol::instance(), &MAVLinkProtocol::receiveBytes);
     (void) disconnect(link, &LinkInterface::bytesSent, MAVLinkProtocol::instance(), &MAVLinkProtocol::logSentBytes);
     (void) disconnect(link, &LinkInterface::disconnected, this, &LinkManager::_linkDisconnected);
 
     link->_freeMavlinkChannel();
+
+    for (auto it = _rgLinks.begin(); it != _rgLinks.end(); ++it) {
+        if (it->get() == link) {
+            qCDebug(LinkManagerLog) << Q_FUNC_INFO << it->get()->linkConfiguration()->name() << it->use_count();
+            (void) _rgLinks.erase(it);
+            return;
+        }
+    }
 }
 
 SharedLinkInterfacePtr LinkManager::sharedLinkInterfacePointerForLink(const LinkInterface *link)
 {
-    QMutexLocker locker(&_linksMutex);
-
-    for (const SharedLinkInterfacePtr &sharedLink: _rgLinks) {
+    for (SharedLinkInterfacePtr &sharedLink: _rgLinks) {
         if (sharedLink.get() == link) {
             return sharedLink;
         }
     }
 
-    // Link not found - this is normal during disconnect when queued signals are still processing.
-    // Callers should check for nullptr return value.
-    qCDebug(LinkManagerLog) << "link not in list (likely disconnected)";
+    qCWarning(LinkManagerLog) << "returning nullptr";
     return SharedLinkInterfacePtr(nullptr);
 }
 
@@ -372,6 +362,14 @@ void LinkManager::loadLinkConfigurationList()
                 link = new MockConfiguration(name);
                 break;
 #endif
+#ifndef QGC_AIRLINK_DISABLED
+            case LinkConfiguration::AirLink:
+                link = new AirLinkConfiguration(name);
+                break;
+#endif
+            case LinkConfiguration::TypeTngEncryptedTest:
+                link = new EncryptedMavlinkConfiguration(name);
+                break;
             case LinkConfiguration::TypeLast:
             default:
                 break;
@@ -398,13 +396,10 @@ void LinkManager::_addUDPAutoConnectLink()
         return;
     }
 
-    {
-        QMutexLocker locker(&_linksMutex);
-        for (const SharedLinkInterfacePtr &link : _rgLinks) {
-            const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
-            if (linkConfig && (linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _defaultUDPLinkName)) {
-                return;
-            }
+    for (SharedLinkInterfacePtr &link : _rgLinks) {
+        const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
+        if ((linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _defaultUDPLinkName)) {
+            return;
         }
     }
 
@@ -422,14 +417,11 @@ void LinkManager::_addMAVLinkForwardingLink()
         return;
     }
 
-    {
-        QMutexLocker locker(&_linksMutex);
-        for (const SharedLinkInterfacePtr &link : _rgLinks) {
-            const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
-            if (linkConfig && (linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingLinkName)) {
-                // TODO: should we check if the host/port matches the mavlinkForwardHostName setting and update if it does not match?
-                return;
-            }
+    for (const SharedLinkInterfacePtr &link : _rgLinks) {
+        const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
+        if ((linkConfig->type() == LinkConfiguration::TypeUdp) && (linkConfig->name() == _mavlinkForwardingLinkName)) {
+            // TODO: should we check if the host/port matches the mavlinkForwardHostName setting and update if it does not match?
+            return;
         }
     }
 
@@ -450,10 +442,9 @@ void LinkManager::_addZeroConfAutoConnectLink()
     browser.reset(new QMdnsEngine::Browser(server.get(), QMdnsEngine::MdnsBrowseType));
 
     const auto checkIfConnectionLinkExist = [this](LinkConfiguration::LinkType linkType, const QString &linkName) {
-        QMutexLocker locker(&_linksMutex);
         for (const SharedLinkInterfacePtr &link : std::as_const(_rgLinks)) {
             const SharedLinkConfigurationPtr linkConfig = link->linkConfiguration();
-            if (linkConfig && (linkConfig->type() == linkType) && (linkConfig->name() == linkName)) {
+            if ((linkConfig->type() == linkType) && (linkConfig->name() == linkName)) {
                 return true;
             }
         }
@@ -579,7 +570,11 @@ QStringList LinkManager::linkTypeStrings() const
 #ifdef QT_DEBUG
     list += tr("Mock Link");
 #endif
+#ifndef QGC_AIRLINK_DISABLED
+    list += tr("AirLink");
+#endif
     list += tr("Log Replay");
+    list += tr("Crypto_Connection");
 
     if (list.size() != static_cast<int>(LinkConfiguration::TypeLast)) {
         qCWarning(LinkManagerLog) << "Internal error";
@@ -675,18 +670,16 @@ void LinkManager::_removeConfiguration(const LinkConfiguration *config)
         }
     }
 
-    qCWarning(LinkManagerLog) << "called with unknown config";
+    qCWarning(LinkManagerLog) << Q_FUNC_INFO << "called with unknown config";
 }
 
 bool LinkManager::isBluetoothAvailable()
 {
-    return QGCNetworkHelper::isBluetoothAvailable();
+    return QGCDeviceInfo::isBluetoothAvailable();
 }
 
-bool LinkManager::containsLink(const LinkInterface *link)
+bool LinkManager::containsLink(const LinkInterface *link) const
 {
-    QMutexLocker locker(&_linksMutex);
-
     for (const SharedLinkInterfacePtr &sharedLink : _rgLinks) {
         if (sharedLink.get() == link) {
             return true;
@@ -795,19 +788,10 @@ bool LinkManager::isLinkUSBDirect(const LinkInterface *link)
 
 void LinkManager::resetMavlinkSigning()
 {
-    // Make a copy under mutex protection to avoid holding lock during signing initialization
-    QList<SharedLinkInterfacePtr> links;
-    {
-        QMutexLocker locker(&_linksMutex);
-        links = _rgLinks;
-    }
-
-    for (const SharedLinkInterfacePtr &sharedLink: links) {
+    for (const SharedLinkInterfacePtr &sharedLink: _rgLinks) {
         sharedLink->initMavlinkSigning();
     }
 }
-
-#ifndef QGC_NO_SERIAL_LINK // Serial Only Functions
 
 void LinkManager::_filterCompositePorts(QList<QGCSerialPortInfo> &portList)
 {
@@ -823,7 +807,7 @@ void LinkManager::_filterCompositePorts(QList<QGCSerialPortInfo> &portList)
                 // Some boards are a composite USB device, with the first port being mavlink and the second something else. We only expose to first mavlink port.
                 // However internal NMEA devices can present like this, so dont skip anything with NMEA in description
                 if(!portInfo.description().contains("NMEA")) {
-                    qCDebug(LinkManagerVerboseLog) << QStringLiteral("Removing secondary port on same device - port:%1 vid:%2 pid%3 sn:%4").arg(portInfo.portName()).arg(portInfo.vendorIdentifier()).arg(portInfo.productIdentifier()).arg(portInfo.serialNumber());
+                    qCDebug(LinkManagerVerboseLog) << QStringLiteral("Removing secondary port on same device - port:%1 vid:%2 pid%3 sn:%4").arg(portInfo.portName()).arg(portInfo.vendorIdentifier()).arg(portInfo.productIdentifier()).arg(portInfo.serialNumber()) << Q_FUNC_INFO;
                     it = portList.erase(it);
                     continue;
                 }
@@ -833,6 +817,8 @@ void LinkManager::_filterCompositePorts(QList<QGCSerialPortInfo> &portList)
         it++;
     }
 }
+
+#ifndef QGC_NO_SERIAL_LINK // Serial Only Functions
 
 void LinkManager::_addSerialAutoConnectLink()
 {
@@ -955,10 +941,8 @@ bool LinkManager::_allowAutoConnectToBoard(QGCSerialPortInfo::BoardType_t boardT
 {
     switch (boardType) {
     case QGCSerialPortInfo::BoardTypePixhawk:
-        if (_autoConnectSettings->autoConnectPixhawk()->rawValue().toBool()) {
-            return true;
-        }
-        break;
+        // USB Pixhawk는 PortScanner 수동 연결만 사용 (LinkManager 자동 시리얼 연결 비활성)
+        return false;
     case QGCSerialPortInfo::BoardTypeSiKRadio:
         if (_autoConnectSettings->autoConnectSiKRadio()->rawValue().toBool()) {
             return true;
@@ -982,10 +966,8 @@ bool LinkManager::_allowAutoConnectToBoard(QGCSerialPortInfo::BoardType_t boardT
     return false;
 }
 
-bool LinkManager::_portAlreadyConnected(const QString &portName)
+bool LinkManager::_portAlreadyConnected(const QString &portName) const
 {
-    QMutexLocker locker(&_linksMutex);
-
     const QString searchPort = portName.trimmed();
     for (const SharedLinkInterfacePtr &linkInterface : _rgLinks) {
         const SharedLinkConfigurationPtr linkConfig = linkInterface->linkConfiguration();
@@ -1033,10 +1015,8 @@ QStringList LinkManager::serialBaudRates()
     return SerialConfiguration::supportedBaudRates();
 }
 
-bool LinkManager::_isSerialPortConnected()
+bool LinkManager::_isSerialPortConnected() const
 {
-    QMutexLocker locker(&_linksMutex);
-
     for (const SharedLinkInterfacePtr &link: _rgLinks) {
         if (qobject_cast<const SerialLink*>(link.get())) {
             return true;

@@ -1,10 +1,19 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "StatusTextHandler.h"
 #include <QGCLoggingCategory.h>
 
 #include <QtCore/QTimer>
 #include <QtCore/QDateTime>
 
-QGC_LOGGING_CATEGORY(StatusTextHandlerLog, "MAVLink.StatusTextHandler")
+QGC_LOGGING_CATEGORY(StatusTextHandlerLog, "qgc.mavlink.statustexthandler")
 
 StatusText::StatusText(MAV_COMPONENT componentid, MAV_SEVERITY severity, const QString &text)
     : m_compId(componentid)
@@ -48,17 +57,17 @@ StatusTextHandler::~StatusTextHandler()
 
 QString StatusTextHandler::getMessageText(const mavlink_message_t &message)
 {
-    // Warning: There is a bug in mavlink which causes mavlink_msg_statustext_get_text to work incorrect.
-    // It ends up copying crap off the end of the buffer, so don't use it for now.
+    QByteArray b;
 
-    mavlink_statustext_t statusText;
-    mavlink_msg_statustext_decode(&message, &statusText);
+    b.resize(MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN + 1);
+    (void) mavlink_msg_statustext_get_text(&message, b.data());
 
-    char buffer[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN + 1];
-    memcpy(buffer, statusText.text, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN);
-    buffer[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] = '\0';
+    // Ensure NUL-termination
+    b[b.length()-1] = '\0';
 
-    return QString(buffer);
+    const QString text = QString::fromLocal8Bit(b.constData(), std::strlen(b.constData()));
+
+    return text;
 }
 
 QString StatusTextHandler::formattedMessages() const

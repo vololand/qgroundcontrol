@@ -1,9 +1,17 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
 
 #include "FactGroup.h"
-#include "QGCMAVLink.h"
 
 Q_DECLARE_LOGGING_CATEGORY(GimbalLog)
 
@@ -24,8 +32,6 @@ class Gimbal : public FactGroup
     Q_PROPERTY(bool     retracted               READ retracted                  NOTIFY retractedChanged)
     Q_PROPERTY(bool     gimbalHaveControl       READ gimbalHaveControl          NOTIFY gimbalHaveControlChanged)
     Q_PROPERTY(bool     gimbalOthersHaveControl READ gimbalOthersHaveControl    NOTIFY gimbalOthersHaveControlChanged)
-    Q_PROPERTY(bool     supportsRetract         READ supportsRetract            NOTIFY capabilityFlagsChanged)
-    Q_PROPERTY(bool     supportsYawLock         READ supportsYawLock            NOTIFY capabilityFlagsChanged)
 
     friend class GimbalController;
 
@@ -63,10 +69,6 @@ public:
     void setGimbalHaveControl(bool set) { if (set != _haveControl) { _haveControl = set; emit gimbalHaveControlChanged(); } }
     void setGimbalOthersHaveControl(bool set) { if (set != _othersHaveControl) { _othersHaveControl = set; emit gimbalOthersHaveControlChanged(); } }
 
-    void setCapabilityFlags(uint32_t flags);
-    bool supportsRetract() const { return (_capabilityFlags & GIMBAL_MANAGER_CAP_FLAGS_HAS_RETRACT) != 0; }
-    bool supportsYawLock() const { return (_capabilityFlags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK) != 0; }
-
 signals:
     void pitchRateChanged();
     void yawRateChanged();
@@ -74,7 +76,6 @@ signals:
     void retractedChanged();
     void gimbalHaveControlChanged();
     void gimbalOthersHaveControlChanged();
-    void capabilityFlagsChanged();
 
 private:
     void _initFacts();
@@ -82,12 +83,11 @@ private:
     unsigned _requestInformationRetries = 3;
     unsigned _requestStatusRetries = 6;
     unsigned _requestAttitudeRetries = 3;
-    bool _receivedGimbalManagerInformation = false;
-    bool _receivedGimbalManagerStatus = false;
-    bool _receivedGimbalDeviceAttitudeStatus = false;
+    bool _receivedInformation = false;
+    bool _receivedStatus = false;
+    bool _receivedAttitude = false;
     bool _isComplete = false;
     bool _neutral = false;
-    uint32_t _capabilityFlags = 0; // GIMBAL_MANAGER_CAP_FLAGS
 
     Fact _absoluteRollFact = Fact(0, QStringLiteral("gimbalRoll"), FactMetaData::valueTypeFloat);
     Fact _absolutePitchFact = Fact(0, QStringLiteral("gimbalPitch"), FactMetaData::valueTypeFloat);

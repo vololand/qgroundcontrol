@@ -1,62 +1,41 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
-#include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
-#include <QtCore/QVariant>
-#include <QtPositioning/QGeoCoordinate>
-#include <QtQmlIntegration/QtQmlIntegration>
 
-Q_DECLARE_LOGGING_CATEGORY(Viewer3DManagerLog)
+///     @author Omid Esrafilian <esrafilian.omid@gmail.com>
 
-class Vehicle;
-class Viewer3DMapProvider;
+class SettingsManager;
+class OsmParser;
+class Viewer3DQmlBackend;
 
+// This class contains all the variables shared between the C++ and QML sides for 3D viewer.
 class Viewer3DManager : public QObject
 {
     Q_OBJECT
-    QML_NAMED_ELEMENT(QGCViewer3DManager)
-    QML_SINGLETON
-    Q_MOC_INCLUDE("Viewer3DMapProvider.h")
+    Q_MOC_INCLUDE("OsmParser.h")
+    Q_MOC_INCLUDE("Viewer3DQmlBackend.h")
 
-    Q_PROPERTY(Viewer3DMapProvider *mapProvider  READ mapProvider  CONSTANT)
-    Q_PROPERTY(QGeoCoordinate       gpsRef      READ gpsRef       NOTIFY gpsRefChanged)
-    Q_PROPERTY(DisplayMode          displayMode READ displayMode  NOTIFY displayModeChanged)
+    Q_PROPERTY(OsmParser* osmParser MEMBER _osmParser CONSTANT)
+    Q_PROPERTY(Viewer3DQmlBackend* qmlBackend MEMBER _qmlBackend CONSTANT)
 
 public:
-    enum DisplayMode {
-        Map,
-        View3D,
-    };
-    Q_ENUM(DisplayMode)
+    explicit Viewer3DManager();
 
-    explicit Viewer3DManager(QObject *parent = nullptr);
+    ~Viewer3DManager();
 
-    Viewer3DMapProvider *mapProvider() const { return _mapProvider; }
-    QGeoCoordinate gpsRef() const { return _gpsRef; }
-    DisplayMode displayMode() const { return _displayMode; }
+    static void registerQmlTypes();
 
-    Q_INVOKABLE void setDisplayMode(DisplayMode mode);
+protected:
+    OsmParser *_osmParser = nullptr;
+    Viewer3DQmlBackend *_qmlBackend = nullptr;
 
-signals:
-    void gpsRefChanged();
-    void displayModeChanged();
-
-private:
-    enum class GpsRefSource {
-        None,
-        Map,
-        Vehicle,
-    };
-
-    void _onGpsRefChanged(const QGeoCoordinate &newGpsRef, bool isRefSet);
-    void _onActiveVehicleChanged(Vehicle *vehicle);
-    void _onActiveVehicleCoordinateChanged(const QGeoCoordinate &newCoordinate);
-    void _onEnabledChanged(const QVariant &value);
-
-    Viewer3DMapProvider *_mapProvider = nullptr;
-    Vehicle *_activeVehicle = nullptr;
-
-    QGeoCoordinate _gpsRef;
-    GpsRefSource _gpsRefSource = GpsRefSource::None;
-    DisplayMode _displayMode = DisplayMode::Map;
 };

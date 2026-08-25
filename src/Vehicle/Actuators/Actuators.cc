@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "Actuators.h"
 #include "GeometryImage.h"
 #include "ParameterManager.h"
@@ -356,9 +365,9 @@ void Actuators::updateActuatorActions()
                         auto actuatorAction = new ActuatorActions::Action(this, action, outputFunction.label, outputFunctionVal, _vehicle);
                         ActuatorActions::ActionGroup* actionGroup = nullptr;
                         // try to find the group
-                        for (int actionGroupIdx = 0; actionGroupIdx < _actuatorActions->count(); actionGroupIdx++) {
+                        for (int groupIdx = 0; groupIdx < _actuatorActions->count(); groupIdx++) {
                             ActuatorActions::ActionGroup* curActionGroup =
-                                    qobject_cast<ActuatorActions::ActionGroup*>(_actuatorActions->get(actionGroupIdx));
+                                    qobject_cast<ActuatorActions::ActionGroup*>(_actuatorActions->get(groupIdx));
                             if (curActionGroup->type() == action.type) {
                                 actionGroup = curActionGroup;
                                 break;
@@ -469,8 +478,8 @@ bool Actuators::parseJson(const QJsonDocument &json)
                 }
             }
 
-            QJsonArray subgroupParameters = subgroup["parameters"].toArray();
-            for (const auto&& parameterJson : subgroupParameters) {
+            QJsonArray parameters = subgroup["parameters"].toArray();
+            for (const auto&& parameterJson : parameters) {
                 actuatorSubgroup->addConfigParam(parseParam(parameterJson.toObject()));
             }
 
@@ -586,8 +595,8 @@ bool Actuators::parseJson(const QJsonDocument &json)
     Mixer::MixerOptions mixerOptions{};
     QJsonValue mixerConfigJson = mixerJson.toObject().value("config");
     QJsonArray mixerConfigJsonArr = mixerConfigJson.toArray();
-    for (const auto&& mixerConfigJsonValue : mixerConfigJsonArr) {
-        QJsonValue mixerConfig = mixerConfigJsonValue.toObject();
+    for (const auto&& mixerConfigJson : mixerConfigJsonArr) {
+        QJsonValue mixerConfig = mixerConfigJson.toObject();
         Mixer::MixerOption option{};
         option.option = mixerConfig["option"].toString();
         option.type = mixerConfig["type"].toString();

@@ -1,10 +1,18 @@
-#pragma once
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-#include <QtCore/QObject>
-#include <QtQmlIntegration/QtQmlIntegration>
+#pragma once
 
 #include "Fact.h"
 #include "FactValueGrid.h"
+
+#include <QtCore/QObject>
 
 class Vehicle;
 class QmlObjectListModel;
@@ -12,8 +20,7 @@ class QmlObjectListModel;
 class InstrumentValueData : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+
 public:
     enum RangeType {
         NoRangeInfo = 0,

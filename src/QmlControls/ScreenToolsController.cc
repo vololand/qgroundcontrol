@@ -1,3 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
+/// @file
+/// @author Gus Grubba <gus@auterion.com>
+
 #include "ScreenToolsController.h"
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
@@ -13,7 +26,7 @@
 #include <sys/utsname.h>
 #endif
 
-QGC_LOGGING_CATEGORY(ScreenToolsControllerLog, "QMLControls.ScreenToolsController")
+QGC_LOGGING_CATEGORY(ScreenToolsControllerLog, "qgc.qmlcontrols.screentoolscontroller")
 
 ScreenToolsController::ScreenToolsController(QObject *parent)
     : QObject(parent)

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -5,7 +14,6 @@
 #include <QtCore/QStringList>
 #include <QtCore/QUrl>
 #include <QtCore/QVariant>
-#include <QtQmlIntegration/QtQmlIntegration>
 
 #include "AutoPilotPlugin.h"
 
@@ -20,8 +28,7 @@ Q_DECLARE_LOGGING_CATEGORY(VehicleComponentLog)
 class VehicleComponent : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+
     Q_PROPERTY(QString  name                                                READ name                   CONSTANT)
     Q_PROPERTY(QString  description                                         READ description            CONSTANT)
     Q_PROPERTY(bool     requiresSetup                                       READ requiresSetup          CONSTANT)
@@ -38,7 +45,7 @@ public:
     virtual ~VehicleComponent();
 
     virtual QString name() const = 0;
-    virtual QString description() const { return QString(); }
+    virtual QString description() const = 0;
     virtual QString iconResource() const = 0;
     virtual bool requiresSetup() const = 0;
     virtual bool setupComplete() const = 0;
@@ -68,7 +75,7 @@ signals:
     void setupSourceChanged();
 
 protected slots:
-    void _triggerUpdated(QVariant /*value*/) { emit setupCompleteChanged(); }
+    void _triggerUpdated(QVariant value) { emit setupCompleteChanged(); }
 
 protected:
     Vehicle *_vehicle = nullptr;

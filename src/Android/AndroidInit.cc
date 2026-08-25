@@ -2,6 +2,7 @@
 #ifndef QGC_NO_SERIAL_LINK
     #include "AndroidSerial.h"
 #endif
+#include "JoystickAndroid.h"
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QJniEnvironment>
@@ -106,6 +107,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     #ifndef QGC_NO_SERIAL_LINK
         AndroidSerial::setNativeMethods();
     #endif
+
+    JoystickAndroid::setNativeMethods();
 
     QNativeInterface::QAndroidApplication::hideSplashScreen(333);
 

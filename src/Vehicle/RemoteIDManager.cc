@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "RemoteIDManager.h"
 #include "SettingsManager.h"
 #include "RemoteIDSettings.h"
@@ -6,7 +15,7 @@
 #include "MAVLinkProtocol.h"
 #include "QGCLoggingCategory.h"
 
-QGC_LOGGING_CATEGORY(RemoteIDManagerLog, "Vehicle.RemoteIDManager")
+QGC_LOGGING_CATEGORY(RemoteIDManagerLog, "RemoteIDManagerLog")
 
 #define AREA_COUNT 1
 #define AREA_RADIUS 0
@@ -57,11 +66,11 @@ RemoteIDManager::RemoteIDManager(Vehicle* vehicle)
     _targetSystem = _vehicle->id();
     _targetComponent = _vehicle->compId();
 
-    if (_settings->operatorIDValid()->rawValue() == true || (_settings->region()->rawValue().toInt() != Region::EU && _settings->operatorID()->rawValue().toString().length() > 0)) {
+    if (_settings->operatorIDValid()->rawValue() == true) {
         // If it was already checked, we can flag this as good to go.
         // We don't do a fresh verification because we don't store the private part of the ID.
         _operatorIDGood = true;
-        emit operatorIDGoodChanged();
+        operatorIDGoodChanged();
     }
 }
 

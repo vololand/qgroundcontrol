@@ -1,5 +1,13 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "LinkConfiguration.h"
-#include "QGCLoggingCategory.h"
 #ifndef QGC_NO_SERIAL_LINK
 #include "SerialLink.h"
 #endif
@@ -12,14 +20,16 @@
 #ifdef QT_DEBUG
 #include "MockLink.h"
 #endif
-
-QGC_LOGGING_CATEGORY(LinkConfigurationLog, "Comms.LinkConfiguration")
+#ifndef QGC_AIRLINK_DISABLED
+#include "AirLinkLink.h"
+#endif
+#include "EncryptedMavlinkLink.h"
 
 LinkConfiguration::LinkConfiguration(const QString &name, QObject *parent)
     : QObject(parent)
     , _name(name)
 {
-    qCDebug(LinkConfigurationLog) << this;
+    // qCDebug(AudioOutputLog) << Q_FUNC_INFO << this;
 }
 
 LinkConfiguration::LinkConfiguration(const LinkConfiguration *copy, QObject *parent)
@@ -30,14 +40,14 @@ LinkConfiguration::LinkConfiguration(const LinkConfiguration *copy, QObject *par
     , _autoConnect(copy->isAutoConnect())
     , _highLatency(copy->isHighLatency())
 {
-    qCDebug(LinkConfigurationLog) << this;
+    // qCDebug(AudioOutputLog) << Q_FUNC_INFO << this;
 
     Q_ASSERT(!_name.isEmpty());
 }
 
 LinkConfiguration::~LinkConfiguration()
 {
-    qCDebug(LinkConfigurationLog) << this;
+    // qCDebug(AudioOutputLog) << Q_FUNC_INFO << this;
 }
 
 void LinkConfiguration::copyFrom(const LinkConfiguration *source)
@@ -80,6 +90,14 @@ LinkConfiguration *LinkConfiguration::createSettings(int type, const QString &na
         config = new MockConfiguration(name);
         break;
 #endif
+#ifndef QGC_AIRLINK_DISABLED
+    case AirLink:
+        config = new AirLinkConfiguration(name);
+        break;
+#endif
+    case TypeTngEncryptedTest:
+        config = new EncryptedMavlinkConfiguration(name);
+        break;
     case TypeLast:
     default:
         break;
@@ -117,6 +135,14 @@ LinkConfiguration *LinkConfiguration::duplicateSettings(const LinkConfiguration 
         dupe = new MockConfiguration(qobject_cast<const MockConfiguration*>(source));
         break;
 #endif
+#ifndef QGC_AIRLINK_DISABLED
+    case AirLink:
+        dupe = new AirLinkConfiguration(qobject_cast<const AirLinkConfiguration*>(source));
+        break;
+#endif
+    case TypeTngEncryptedTest:
+        dupe = new EncryptedMavlinkConfiguration(qobject_cast<const EncryptedMavlinkConfiguration*>(source));
+        break;
     case TypeLast:
     default:
         break;
@@ -139,9 +165,7 @@ void LinkConfiguration::setLink(const SharedLinkInterfacePtr link)
         _link = link;
         emit linkChanged();
 
-        if (link.get()) {
-            (void) connect(link.get(), &LinkInterface::disconnected, this, &LinkConfiguration::linkChanged, Qt::QueuedConnection);
-        }
+        (void) connect(link.get(), &LinkInterface::disconnected, this, &LinkConfiguration::linkChanged, Qt::QueuedConnection);
     }
 }
 

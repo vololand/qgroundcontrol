@@ -1,11 +1,25 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.MultiVehicleManager
+import QGroundControl.Palette
 
 Rectangle {
     id:             __mavlinkRoot
@@ -276,13 +290,11 @@ Rectangle {
                             onActivated: (index) => {
                                 saveItems();
                                 _mavlinkLogManager.windSpeed = windItems.get(index).value
-                                //console.log('Set Wind: ' + windItems.get(index).value)
                             }
                             Component.onCompleted: {
                                 for(var i = 0; i < windItems.count; i++) {
                                     if(windItems.get(i).value === _mavlinkLogManager.windSpeed) {
                                         windCombo.currentIndex = i;
-                                        //console.log('Wind: ' + windItems.get(i).value)
                                         break;
                                     }
                                 }
@@ -315,13 +327,11 @@ Rectangle {
                             onActivated: (index) => {
                                 saveItems();
                                 _mavlinkLogManager.rating = ratingItems.get(index).value
-                                //console.log('Set Rating: ' + ratingItems.get(index).value)
                             }
                             Component.onCompleted: {
                                 for(var i = 0; i < ratingItems.count; i++) {
                                     if(ratingItems.get(i).value === _mavlinkLogManager.rating) {
                                         ratingCombo.currentIndex = i;
-                                        //console.log('Rating: ' + ratingItems.get(i).value)
                                         break;
                                     }
                                 }

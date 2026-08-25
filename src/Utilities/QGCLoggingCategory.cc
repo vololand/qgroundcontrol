@@ -1,195 +1,102 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QGlobalStatic>
 #include <QtCore/QSettings>
 
-QGC_LOGGING_CATEGORY(QGCLoggingCategoryRegisterLog, "Utilities.QGCLoggingCategoryManager")
+QGC_LOGGING_CATEGORY(QGCLoggingCategoryRegisterLog, "qgc.utilities.qgcloggingcategory")
 
-Q_GLOBAL_STATIC(QGCLoggingCategoryManager, _QGCLoggingCategoryManagerInstance);
+Q_GLOBAL_STATIC(QGCLoggingCategoryRegister, _QGCLoggingCategoryRegisterInstance);
 
-QGCLoggingCategoryManager *QGCLoggingCategoryManager::instance()
+QGCLoggingCategoryRegister *QGCLoggingCategoryRegister::instance()
 {
-    return _QGCLoggingCategoryManagerInstance();
+    return _QGCLoggingCategoryRegisterInstance();
 }
 
-void QGCLoggingCategoryManager::_insertSorted(QmlObjectListModel* model, QGCLoggingCategoryItem* item)
+QStringList QGCLoggingCategoryRegister::registeredCategories()
 {
-    for (int i=0; i<model->count(); i++) {
-        auto existingItem = qobject_cast<QGCLoggingCategoryItem*>(model->get(i));
-        if (item->fullCategory < existingItem->fullCategory) {
-            model->insert(i, item);
-            return;
-        }
-    }
-    model->append(item);
+    _registeredCategories.sort();
+    return _registeredCategories;
 }
 
-void QGCLoggingCategoryManager::registerCategory(const QString &fullCategory)
-{
-    //qDebug() << "Registering logging full category" << fullCategory;
-
-    QString parentCategory;
-    QString childCategory(fullCategory);
-    auto currentParentModel = &_treeCategoryModel;
-
-    auto hierarchyIndex = fullCategory.indexOf(".");
-    if (hierarchyIndex != -1) {
-        parentCategory = fullCategory.left(hierarchyIndex);
-        childCategory = fullCategory.mid(hierarchyIndex + 1);
-        QString fullParentCategory = parentCategory + ".";
-        //qDebug() << "  Parent category" << parentCategory << "child category" << childCategory << "full parent category" << fullParentCategory;
-
-        bool found = false;
-        for (int j=0; j<currentParentModel->count(); j++) {
-            auto item = qobject_cast<QGCLoggingCategoryItem*>(currentParentModel->get(j));
-            if (item->fullCategory == fullParentCategory && item->children) {
-                //qDebug() << "  Found existing parent full category" << item->fullCategory;
-                currentParentModel = item->children;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            auto newParentItem = new QGCLoggingCategoryItem(parentCategory, fullParentCategory, false /* enabled */, currentParentModel);
-            newParentItem->children = new QmlObjectListModel(newParentItem);
-            _insertSorted(&_flatCategoryModel, newParentItem);
-            _insertSorted(currentParentModel, newParentItem);
-            currentParentModel = newParentItem->children;
-            //qDebug() << "  New parent full category" << newParentItem->fullCategory;
-        }
-    }
-
-    auto categoryItem = new QGCLoggingCategoryItem(childCategory, fullCategory, false /* enabled */, currentParentModel);
-    _insertSorted(&_flatCategoryModel, categoryItem);
-    _insertSorted(currentParentModel, categoryItem);
-    //qDebug() << "  New category full category" << categoryItem->fullCategory << "childCategory" << childCategory;
-}
-
-void QGCLoggingCategoryManager::setCategoryLoggingOn(const QString &fullCategoryName, bool enable)
-{
-    qCDebug(QGCLoggingCategoryRegisterLog) << "Set category logging" << fullCategoryName << enable;
-
-    QSettings settings;
-    settings.beginGroup(kFilterRulesSettingsGroup);
-    if (enable) {
-        settings.setValue(fullCategoryName, enable);
-    } else {
-        settings.remove(fullCategoryName);
-    }
-
-    setFilterRulesFromSettings(QString());
-}
-
-bool QGCLoggingCategoryManager::categoryLoggingOn(const QString &fullCategoryName)
+void QGCLoggingCategoryRegister::setCategoryLoggingOn(const QString &category, bool enable)
 {
     QSettings settings;
 
     settings.beginGroup(kFilterRulesSettingsGroup);
-    return settings.value(fullCategoryName, false).toBool();
+    settings.setValue(category, enable);
+
+    settings.endGroup();
 }
 
-void QGCLoggingCategoryManager::setFilterRulesFromSettings(const QString &commandLineLoggingOptions)
+bool QGCLoggingCategoryRegister::categoryLoggingOn(const QString &category)
 {
+    QSettings settings;
+
+    settings.beginGroup(kFilterRulesSettingsGroup);
+    return settings.value(category, false).toBool();
+}
+
+void QGCLoggingCategoryRegister::setFilterRulesFromSettings(const QString &commandLineLoggingOptions) const
+{
+    static const QString filterRuleFormat = QStringLiteral("%1.debug=true\n");
+    bool videoAllLogSet = false;
+
     QString filterRules;
-    QString filterRuleFormat("%1.debug=true\n");
+    filterRules += QStringLiteral("*Log.debug=false\n");
+    filterRules += QStringLiteral("qgc.*.debug=false\n");
 
-    QSettings settings;
-    settings.beginGroup(kFilterRulesSettingsGroup);
-    for (const QString &fullCategoryName : settings.childKeys()) {
-        QString parentCategory;
-        QString childCategory;
-        _splitFullCategoryName(fullCategoryName, parentCategory, childCategory);
-
-        qCDebug(QGCLoggingCategoryRegisterLog) << "Setting filter rule for saved settings" << fullCategoryName << parentCategory << childCategory << settings.value(fullCategoryName).toBool();
-
-        auto categoryItem = _findLoggingCategory(fullCategoryName);
-        if (categoryItem) {
-            categoryItem->setEnabled(settings.value(fullCategoryName).toBool());
-            if (categoryItem->enabled()) {
-                if (childCategory.isEmpty()) {
-                    // Wildcard parent category
-                    filterRules += filterRuleFormat.arg(fullCategoryName + "*");
-                } else {
-                    filterRules += filterRuleFormat.arg(fullCategoryName);
-                }
+    // Set up filters defined in settings
+    for (const QString &category : std::as_const(_registeredCategories)) {
+        if (categoryLoggingOn(category)) {
+            filterRules += filterRuleFormat.arg(category);
+            if (category == kVideoAllLogCategory) {
+                videoAllLogSet = true;
             }
-        } else {
-            qCWarning(QGCLoggingCategoryRegisterLog) << "Category not found for saved settings" << fullCategoryName;
         }
     }
 
     // Command line rules take precedence, so they go last in the list
     if (!commandLineLoggingOptions.isEmpty()) {
-        const QStringList categoryList = commandLineLoggingOptions.split(",");
+        const QStringList logList = commandLineLoggingOptions.split(",");
 
-        if (categoryList[0] == QStringLiteral("full")) {
-            filterRules += filterRuleFormat.arg("*");
+        if (logList[0] == QStringLiteral("full")) {
+            filterRules += QStringLiteral("*Log.debug=true\n");
+            for (const QString &log : logList) {
+                filterRules += filterRuleFormat.arg(log);
+            }
         } else {
-            for (const QString &category: categoryList) {
+            for (const QString &category: logList) {
                 filterRules += filterRuleFormat.arg(category);
+                if (category == kVideoAllLogCategory) {
+                    videoAllLogSet = true;
+                }
             }
         }
     }
+
+    if (videoAllLogSet) {
+        filterRules += filterRuleFormat.arg("qgc.videomanager.videomanager");
+        filterRules += filterRuleFormat.arg("qgc.videomanager.subtitlewriter");
+        filterRules += filterRuleFormat.arg("qgc.videomanager.videoreceiver.gstreamer");
+        filterRules += filterRuleFormat.arg("qgc.videomanager.videoreceiver.gstreamer.gstvideoreceiver");
+        filterRules += filterRuleFormat.arg("qgc.videomanager.videoreceiver.qtmultimedia.qtmultimediareceiver");
+        filterRules += filterRuleFormat.arg("qgc.videomanager.videoreceiver.qtmultimedia.uvcreceiver");
+    }
+
+    // Logging from GStreamer library itself controlled by gstreamer debug levels is always turned on
+    filterRules += filterRuleFormat.arg("qgc.videomanager.videoreceiver.gstreamer.api");
 
     filterRules += QStringLiteral("qt.qml.connections=false");
 
     qCDebug(QGCLoggingCategoryRegisterLog) << "Filter rules" << filterRules;
     QLoggingCategory::setFilterRules(filterRules);
-}
-
-void QGCLoggingCategoryManager::_splitFullCategoryName(const QString &fullCategoryName, QString &parentCategory, QString &childCategory)
-{
-    const int hierarchyIndex = fullCategoryName.indexOf(".");
-    if (hierarchyIndex == -1) {
-        parentCategory = QString();
-        childCategory = fullCategoryName;
-    } else {
-        parentCategory = fullCategoryName.left(hierarchyIndex);
-        childCategory = fullCategoryName.mid(hierarchyIndex + 1);
-    }
-}
-
-void QGCLoggingCategoryManager::disableAllCategories()
-{
-    QSettings settings;
-    settings.beginGroup(kFilterRulesSettingsGroup);
-    settings.remove("");
-
-    for (int i=0; i<_flatCategoryModel.count(); i++) {
-        auto item = qobject_cast<QGCLoggingCategoryItem*>(_flatCategoryModel.get(i));
-        item->setEnabled(false);
-    }
-
-    setFilterRulesFromSettings(QString());
-}
-
-QGCLoggingCategoryItem *QGCLoggingCategoryManager::_findLoggingCategory(const QString &fullCategoryName)
-{
-    for (int i=0; i<_flatCategoryModel.count(); i++) {
-        auto item = qobject_cast<QGCLoggingCategoryItem*>(_flatCategoryModel.get(i));
-        if (item->fullCategory == fullCategoryName) {
-            return item;
-        }
-    }
-
-    return nullptr;
-}
-
-QGCLoggingCategoryItem::QGCLoggingCategoryItem(const QString& shortCategory_, const QString& fullCategory_, bool enabled_, QObject* parent)
-    : QObject(parent)
-    , shortCategory(shortCategory_)
-    , fullCategory(fullCategory_)
-    , _enabled(enabled_)
-{
-    connect(this, &QGCLoggingCategoryItem::enabledChanged, this, [this]() {
-        QGCLoggingCategoryManager::instance()->setCategoryLoggingOn(this->fullCategory, this->_enabled);
-    });
-}
-
-void QGCLoggingCategoryItem::setEnabled(bool enabled)
-{
-    if (enabled != _enabled) {
-        _enabled = enabled;
-        emit enabledChanged();
-    }
 }

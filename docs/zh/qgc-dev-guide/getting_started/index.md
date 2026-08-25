@@ -1,5 +1,5 @@
 ---
-qt_version: 6.10.1
+qt_version: 6.8.3
 ---
 
 # 从源码开始并构建
@@ -14,22 +14,22 @@ qt_version: 6.10.1
 
 ## 源代码
 
-Source code for _QGroundControl_ is kept on [GitHub](https://github.com/mavlink/qgroundcontrol).
+_QGroundControl_ 的源代码保存在GitHub 上：https://github.com/mavlink/qgroundcontrol。
 它采用 [Apache 2.0 和 GPLv3 双重授权](https://github.com/mavlink/qgroundcontrol/blob/master/.github/COPYING.md)。
 
 要获取源文件, 请执行以下操作:
 
 1. 克隆存储库 (或您的分叉), 包括子模块：
 
-   ```sh
-   git clone --recursive -j8 https://github.com/mavlink/qgroundcontrol.git
-   ```
+  ```sh
+  git clone --recursive -j8 https://github.com/mavlink/qgroundcontrol.git
+  ```
 
 2. 2.更新子模块（每次拉新源代码时都这样做）：
 
-   ```sh
-   git submodule update --recursive
-   ```
+  ```sh
+  git submodule update --recursive
+  ```
 
 :::tip
 提示：不能使用Github以zip形式下载源文件，因为zip压缩包中不包含相应的子模块源代码。 你必须使用git工具！
@@ -66,41 +66,42 @@ QGC 已通过指定 Qt 版本（{{ $frontmatter.qt_version }}）的全面测试�
 如何安装Qt：
 
 1. 下载并运行[Qt Online Installer](https://www.qt.io/download-qt-installer-oss)
-   - **Ubuntu:**
-     - 使用以下命令将下载的文件设置为可执行文件：`chmod + x`
-     - It may also be necessary to install _libxcb-cursor0_.
+  - **Ubuntu:**
+    - 使用以下命令将下载的文件设置为可执行文件：`chmod + x`
+    - 您可能还需要安装 libxcb-cursor0
 
 2. 在 _Installation 文件夹页面选择"自定义安装"
 
 3. 在 _选择组件_ 页面：
 
-- I you don't see _Qt {{ $frontmatter.qt_version }}_ listed check the _Archive_ checkbox and click _Filter_.
-- Under Qt -> _Qt {{ $frontmatter.qt_version }}_ select:
-  - **Windows**: MSVC 2022 \<_arch_\> - where \<_arch_\> is the architecture of your machine
-  - **Mac**: Desktop
-  - **Linux**: Desktop gcc 64-bit
+  - 如果您没有看到 {{ $frontmatter.qt_version }}_ 列出_Qt选中 _Archive_ 复选框并单击 _Filter_。
+
+- 在 Qt -> _Qt {{ $frontmatter.qt_version }}_ 下选择：
+  - **Windows**: MSVC 2022 _arch_ - 其中 “arch” 指的是您机器的架构
+  - **Mac**：桌面
+  - **Linux**: gcc 64-bit 桌面
   - **Android**: Android
-- Select all _Additional Libraries_
-- Deselect QT Design Studio
+- 选择所有 _Additional Libraries_
+- 取消选择 QT Design Studio
 
 1. 安装附加软件包(特殊平台)
 
-   - **Ubuntu:** `sudo bash ./qgroundcontrol/tools/setup/install-dependencies-debian.sh`
-   - **Fedora:** `sudo dnf install speech-dispatcher SDL2-devel SDL2 systemd-devel patchelf`
-   - **Arch Linux:** `pacman -Sy speech-dispatcher patchelf`
-   - **Mac:** `sh qgroundcontrol/tools/setup/install-dependencies-osx.sh`
-   - **Windows:** `qgroundcontrol/tools/setup/install-depedencies-windows.ps1`
-   - **Android:** Installing dependencies for android is quite involved. You are better off using Qt documentation for android setup instructions. Read [Qt 6 for Android](https://doc.qt.io/qt-6/android.html) carefully to the extend. Continue with [Gettting Started with Qt 6 for Android](https://doc.qt.io/qt-6/android-getting-started.html).
+  - **Ubuntu:** `sudo bash ./qgroundcontrol/tools/setup/install-dependencies-debian.sh`
+  - **Fedora:** `sudo dnf install speech-dispatcher SDL2-devel SDL2 systemd-devel patchelf`
+  - **Arch Linux:** `pacman -Sy speech-dispatcher patchelf`
+  - **Mac** `sh qgroundcontrol/tools/setup/macos-dependencies.sh`
+  - **Android** [Setup](https://doc.qt.io/qt-6/android-getting-started.html)。 最新版本需要 JDK17 。 NDK 版本：25.1.8937393
+    您可以通过审查项目设置确认它正在使用：**Projects > Managing Kits >  Devices > Android (tab) > Android Settings > _JDK location_**。
+    注意：访问此处查看更详细的配置 [android.yml](.github/workflows/android.yml)
 
-2. Install OS-Specific Functionalities
+2. 安装可选/特定操作功能
 
-   ::: info
-   依赖操作系统和用户安装的库的可选功能在下面链接/描述。
-   这些功能可以被强制启用/禁用，为qmake指定额外的值。
-   :::
+  ::: info
+  依赖操作系统和用户安装的库的可选功能在下面链接/描述。
+  这些功能可以被强制启用/禁用，为qmake指定额外的值。
+  :::
 
-   - **视频流/Gstream:** - 查看 [视频流](https://github.com/mavlink/qgroundcontrol/blob/master/src/VideoManager/VideoReceiver/GStreamer/README.md)
-   - **Scripting Install:** - to build the installation file at Windows, install [NSIS](https://nsis.sourceforge.io/Download).
+  - **视频流/Gstream:** - 查看 [视频流](https://github.com/mavlink/qgroundcontrol/blob/master/src/VideoManager/VideoReceiver/GStreamer/README.md)
 
 #### 安装 Visual Studio (仅限Windows) {#vs}
 
@@ -110,8 +111,8 @@ QGC 已通过指定 Qt 版本（{{ $frontmatter.qt_version }}）的全面测试�
 
 ![Visual Studio 2019 - 选择基于 C++ 的桌面开发环境](../../../assets/dev_getting_started/visual_studio_select_features.png)
 
-::: info
-Visual Studio is ONLY used to get the compiler. Building _QGroundControl_ is done using [Qt Creator](#qt-creator) or [cmake](#cmake) directly as outlined below.
+:::info
+Visual Studio 仅用于获取编译器。 构建 _QGroundControl_ 可直接按以下概述，使用 [Qt Creator](#qt-creator) 或 [cmake](#cmake) 完成。
 :::
 
 #### 使用 Qt Creator {#qt-creator} 进行构建
@@ -120,13 +121,9 @@ Visual Studio is ONLY used to get the compiler. Building _QGroundControl_ is don
 
 2. 在 _Configure Project_ 页面上，它应该默认您刚刚使用上面的说明安装的 Qt 版本。 如果不从列表中选择该套件，然后点击 _Configure Project_。
 
-   :::tip
-   Don't forget to check boxes in case you want to build a Release instead of Debug, or check the other types. To create the installation file go to the "Deploy Settings" Tab, click in the menu button "Add Deploy Step", select "CMake Install" and as argument you must set at least `--config Release`.
-   :::
+3. 使用"hammer" (或"play") 图标或菜单构建：
 
-3. Build using the "hammer" icon. After that, in order to deploy the build, use the "play" icon. Or use the menu Build on top for a detailed alternative.
-
-   ![QtCreator Build Button](../../../assets/dev_getting_started/qt_creator_build_qgc.png)
+  ![QtCreator Build Button](../../../assets/dev_getting_started/qt_creator_build_qgc.png)
 
 #### 在CLI（命令行界面）使用 CMake {#cmake} 进行构建
 
@@ -134,36 +131,29 @@ Visual Studio is ONLY used to get the compiler. Building _QGroundControl_ is don
 
 1. 请确保您克隆了仓库并先更新子模块，见上文 _源代码_ 章节并切换到仓库文件夹：
 
-   ```sh
-   cd qgroundcontrol
-   ```
+  ```sh
+  cd qgroundcontrol
+  ```
 
 2. 配置：
 
-   ```sh
-   ~/Qt/{{ qt_version }}/gcc_64/bin/qt-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-   ```
+  ```sh
+  ~/Qt/6.8.3/gcc_64/bin/qt-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+  ```
 
-   Change the directory for `qt-cmake` to match your install location for Qt and the kit you want to use.
-
-   **Mac**: To Sign/Notarize/Staple the QGC app bundle, add `-DQGC_MACOS_SIGN_WITH_IDENTITY=ON` to the configure command line. During the `install` phase the following environment variables will need to be available:
-
-   - `QGC_MACOS_SIGNING_IDENTITY` - Signing identity for your Developer ID certificate which must be in the keychain
-   - `QGC_MACOS_NOTARIZATION_USERNAME` - Username for your Apple Developer Account
-   - `QGC_MACOS_NOTARIZATION_PASSWORD` - App specific password for Notarization from your Apple Developer Account
-   - `QGC_MACOS_NOTARIZATION_TEAM_ID` - Apple Developer Account Team ID
+  修改 qt-cmake 的目录，使其与你安装 Qt 的位置以及你想要使用的工具包相匹配。
 
 3. 构建
 
-   ```sh
-   cmake --build build --config Debug
-   ```
+  ```sh
+  cmake --build build --config Debug
+  ```
 
 4. Run the QGroundcontrol binary that was just built: `./staging/QGroundControl`
 
-   ```sh
-   ./build/Debug/QGroundControl
-   ```
+  ```sh
+  ./build/Debug/QGroundControl
+  ```
 
 ### Vagrant
 

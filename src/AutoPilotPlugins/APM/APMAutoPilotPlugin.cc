@@ -1,6 +1,15 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "APMAutoPilotPlugin.h"
 #include "APMAirframeComponent.h"
-#include "APMGimbalComponent.h"
+#include "APMCameraComponent.h"
 #include "APMFlightModesComponent.h"
 #include "APMHeliComponent.h"
 #include "APMLightsComponent.h"
@@ -13,8 +22,6 @@
 #include "APMSubFrameComponent.h"
 #include "APMTuningComponent.h"
 #include "ESP8266Component.h"
-#include "ScriptingComponent.h"
-#include "JoystickComponent.h"
 #include "ParameterManager.h"
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
@@ -30,7 +37,7 @@
 #include "SerialLink.h"
 #endif
 
-QGC_LOGGING_CATEGORY(APMAutoPilotPluginLog, "AutoPilotPlugins.APM.apmautopilotplugin")
+QGC_LOGGING_CATEGORY(APMAutoPilotPluginLog, "qgc.autopilotplugins.apm.apmautopilotplugin")
 
 APMAutoPilotPlugin::APMAutoPilotPlugin(Vehicle *vehicle, QObject *parent)
     : AutoPilotPlugin(vehicle, parent)
@@ -105,9 +112,11 @@ const QVariantList &APMAutoPilotPlugin::vehicleComponents()
             _tuningComponent->setupTriggerSignals();
             _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_tuningComponent)));
 
-            _gimbalComponent = new APMGimbalComponent(_vehicle, this);
-            _gimbalComponent->setupTriggerSignals();
-            _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_gimbalComponent)));
+            if (_vehicle->parameterManager()->parameterExists(-1, "MNT1_TYPE")) {
+                _cameraComponent = new APMCameraComponent(_vehicle, this);
+                _cameraComponent->setupTriggerSignals();
+                _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_cameraComponent)));
+            }
 
             if (_vehicle->sub()) {
                 _lightsComponent = new APMLightsComponent(_vehicle, this);
@@ -131,14 +140,6 @@ const QVariantList &APMAutoPilotPlugin::vehicleComponents()
             _apmRemoteSupportComponent = new APMRemoteSupportComponent(_vehicle, this);
             _apmRemoteSupportComponent->setupTriggerSignals();
             _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_apmRemoteSupportComponent)));
-
-            _joystickComponent = new JoystickComponent(_vehicle, this, this);
-            _joystickComponent->setupTriggerSignals();
-            _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_joystickComponent)));
-
-            _scriptingComponent = new ScriptingComponent(_vehicle, this, this);
-            _scriptingComponent->setupTriggerSignals();
-            _components.append(QVariant::fromValue(qobject_cast<VehicleComponent*>(_scriptingComponent)));
         } else {
             qCWarning(APMAutoPilotPluginLog) << "Call to vehicleComponents prior to parametersReady";
         }
@@ -160,6 +161,8 @@ QString APMAutoPilotPlugin::prerequisiteSetup(VehicleComponent *component) const
         }
         requiresAirframeCheck = true;
     } else if (qobject_cast<const APMRadioComponent*>(component)) {
+        requiresAirframeCheck = true;
+    } else if (qobject_cast<const APMCameraComponent*>(component)) {
         requiresAirframeCheck = true;
     } else if (qobject_cast<const APMPowerComponent*>(component)) {
         requiresAirframeCheck = true;

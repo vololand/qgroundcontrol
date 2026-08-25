@@ -1,7 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "UDPLink.h"
 #include "AutoConnectSettings.h"
+#include "DeviceInfo.h"
 #include "QGCLoggingCategory.h"
-#include "QGCNetworkHelper.h"
 #include "SettingsManager.h"
 
 #include <QtCore/QMutexLocker>
@@ -12,7 +21,7 @@
 #include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QUdpSocket>
 
-QGC_LOGGING_CATEGORY(UDPLinkLog, "Comms.UDPLink")
+QGC_LOGGING_CATEGORY(UDPLinkLog, "qgc.comms.udplink")
 
 namespace {
     constexpr int BUFFER_TRIGGER_SIZE = 10 * 1024;
@@ -40,7 +49,7 @@ UDPConfiguration::UDPConfiguration(const QString &name, QObject *parent)
 UDPConfiguration::UDPConfiguration(const UDPConfiguration *source, QObject *parent)
     : LinkConfiguration(source, parent)
 {
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 
     UDPConfiguration::copyFrom(source);
 }
@@ -49,7 +58,7 @@ UDPConfiguration::~UDPConfiguration()
 {
     _targetHosts.clear();
 
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 }
 
 void UDPConfiguration::setAutoConnect(bool autoc)
@@ -59,11 +68,12 @@ void UDPConfiguration::setAutoConnect(bool autoc)
         const QString targetHostIP = settings->udpTargetHostIP()->rawValue().toString();
         const quint16 targetHostPort = settings->udpTargetHostPort()->rawValue().toUInt();
         if (autoc) {
-            setLocalPort(settings->udpListenPort()->rawValue().toInt());
+            setLocalPort(settings->udpListenPort()->rawValue().toInt());    
             if (!targetHostIP.isEmpty()) {
                 addHost(targetHostIP, targetHostPort);
             }
-        } else {
+        }
+        else {
             setLocalPort(0);
             if (!targetHostIP.isEmpty()) {
                 removeHost(targetHostIP, targetHostPort);
@@ -75,9 +85,11 @@ void UDPConfiguration::setAutoConnect(bool autoc)
 
 void UDPConfiguration::copyFrom(const LinkConfiguration *source)
 {
+    Q_ASSERT(source);
     LinkConfiguration::copyFrom(source);
 
-    const UDPConfiguration *udpSource = qobject_cast<const UDPConfiguration*>(source);
+    const UDPConfiguration *const udpSource = qobject_cast<const UDPConfiguration*>(source);
+    Q_ASSERT(udpSource);
 
     setLocalPort(udpSource->localPort());
     _targetHosts.clear();
@@ -257,14 +269,14 @@ UDPWorker::UDPWorker(const UDPConfiguration *config, QObject *parent)
     : QObject(parent)
     , _udpConfig(config)
 {
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 }
 
 UDPWorker::~UDPWorker()
 {
     disconnectLink();
 
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 }
 
 bool UDPWorker::isConnected() const
@@ -274,9 +286,8 @@ bool UDPWorker::isConnected() const
 
 void UDPWorker::setupSocket()
 {
-    if (!_socket) {
-        _socket = new QUdpSocket(this);
-    }
+    Q_ASSERT(!_socket);
+    _socket = new QUdpSocket(this);
 
     const QList<QHostAddress> localAddresses = QNetworkInterface::allAddresses();
     _localAddresses = QSet(localAddresses.constBegin(), localAddresses.constEnd());
@@ -355,15 +366,10 @@ void UDPWorker::disconnectLink()
     _deregisterZeroconf();
 #endif
 
-    if (!isConnected()) {
-        qCDebug(UDPLinkLog) << "Already disconnected";
-        return;
+    if (isConnected()) {
+        (void) _socket->leaveMulticastGroup(_multicastGroup);
+        _socket->close();
     }
-
-    qCDebug(UDPLinkLog) << "Disconnecting UDP link";
-
-    (void) _socket->leaveMulticastGroup(_multicastGroup);
-    _socket->close();
 
     _sessionTargets.clear();
 }
@@ -487,6 +493,8 @@ void UDPWorker::_zeroconfRegisterCallback(DNSServiceRef sdRef, DNSServiceFlags f
 {
     Q_UNUSED(sdRef); Q_UNUSED(flags); Q_UNUSED(name); Q_UNUSED(regtype); Q_UNUSED(domain);
 
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO;
+
     UDPWorker *const worker = static_cast<UDPWorker*>(context);
     if (errorCode != kDNSServiceErr_NoError) {
         emit worker->errorOccurred(tr("Zeroconf Register Error: %1").arg(errorCode));
@@ -556,7 +564,7 @@ UDPLink::UDPLink(SharedLinkConfigurationPtr &config, QObject *parent)
     , _worker(new UDPWorker(_udpConfig))
     , _workerThread(new QThread(this))
 {
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 
     _workerThread->setObjectName(QStringLiteral("UDP_%1").arg(_udpConfig->name()));
 
@@ -576,22 +584,19 @@ UDPLink::UDPLink(SharedLinkConfigurationPtr &config, QObject *parent)
 
 UDPLink::~UDPLink()
 {
-    if (isConnected()) {
-        (void) QMetaObject::invokeMethod(_worker, "disconnectLink", Qt::BlockingQueuedConnection);
-        _onDisconnected();
-    }
+    UDPLink::disconnect();
 
     _workerThread->quit();
     if (!_workerThread->wait()) {
         qCWarning(UDPLinkLog) << "Failed to wait for UDP Thread to close";
     }
 
-    qCDebug(UDPLinkLog) << this;
+    // qCDebug(UDPLinkLog) << Q_FUNC_INFO << this;
 }
 
 bool UDPLink::isConnected() const
 {
-    return _worker && _worker->isConnected();
+    return _worker->isConnected();
 }
 
 bool UDPLink::_connect()
@@ -601,22 +606,17 @@ bool UDPLink::_connect()
 
 void UDPLink::disconnect()
 {
-    if (isConnected()) {
-        (void) QMetaObject::invokeMethod(_worker, "disconnectLink", Qt::QueuedConnection);
-    }
+    (void) QMetaObject::invokeMethod(_worker, "disconnectLink", Qt::QueuedConnection);
 }
 
 void UDPLink::_onConnected()
 {
-    _disconnectedEmitted = false;
     emit connected();
 }
 
 void UDPLink::_onDisconnected()
 {
-    if (!_disconnectedEmitted.exchange(true)) {
-        emit disconnected();
-    }
+    emit disconnected();
 }
 
 void UDPLink::_onErrorOccurred(const QString &errorString)
@@ -642,5 +642,5 @@ void UDPLink::_writeBytes(const QByteArray& bytes)
 
 bool UDPLink::isSecureConnection() const
 {
-    return QGCNetworkHelper::isNetworkEthernet();
+    return QGCDeviceInfo::isNetworkEthernet();
 }

@@ -1,11 +1,25 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Controllers
 
 SetupPage {
     id:             followPage
@@ -60,7 +74,6 @@ SetupPage {
                     followYawOk = _followYawBehavior.rawValue == _followYawBehaviorNone || _followYawBehavior.rawValue == _followYawBehaviorFace || _followYawBehavior.rawValue == _followYawBehaviorFlight
                 }
                 _supportedSetup = followOffsetOk && followAltOk && followYawOk && followSysIdOk
-                console.log("_supportedSetup", _supportedSetup, followSysIdOk, followOffsetOk, followAltOk, followYawOk)
                 return _supportedSetup
             }
 
@@ -209,7 +222,6 @@ SetupPage {
                     anchors.right:  parent.right
                     text:           qsTr("The vehicle parameters required for follow me are currently set in a way which is not supported. Using follow with this setup may lead to unpredictable/hazardous results.")
                     wrapMode:       Text.WordWrap
-                    onWidthChanged: console.log('width', width)
                 }
 
                 QGCButton {
@@ -277,7 +289,7 @@ SetupPage {
                         QGCLabel { text: qsTr("Angle") }
                         FactTextField {
                             fact:       controller.angle
-                            onUpdated:  { console.log("updated"); _setXYOffsetByAngleAndDistance(controller.angle.rawValue, controller.distance.rawValue) }
+                            onUpdated:  _setXYOffsetByAngleAndDistance(controller.angle.rawValue, controller.distance.rawValue)
                         }
 
                         QGCLabel { text: qsTr("Distance") }
@@ -336,7 +348,7 @@ SetupPage {
                     Image {
                         id:                 gcsIcon
                         anchors.centerIn:   parent
-                        source:             "/res/QGCLogoArrow.svg"
+                        source:             "/res/VloLogArrow.svg"
                         mipmap:             true
                         antialiasing:       true
                         fillMode:           Image.PreserveAspectFit

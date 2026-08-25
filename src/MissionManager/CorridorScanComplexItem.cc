@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "CorridorScanComplexItem.h"
 #include "JsonHelper.h"
 #include "SettingsManager.h"
@@ -8,13 +17,13 @@
 
 #include <QtCore/QJsonArray>
 
-QGC_LOGGING_CATEGORY(CorridorScanComplexItemLog, "Plan.CorridorScanComplexItemL")
+QGC_LOGGING_CATEGORY(CorridorScanComplexItemLog, "CorridorScanComplexItemLog")
 
 const QString CorridorScanComplexItem::name(CorridorScanComplexItem::tr("Corridor Scan"));
 
 CorridorScanComplexItem::CorridorScanComplexItem(PlanMasterController* masterController, bool flyView, const QString& kmlOrShpFile)
     : TransectStyleComplexItem  (masterController, flyView, settingsGroup)
-    , _entryPointLocation       (EntryPointDefaultOrder)
+    , _entryPoint               (0)
     , _metaDataMap              (FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/CorridorScan.SettingsGroup.json"), this))
     , _corridorWidthFact        (settingsGroup, _metaDataMap[corridorWidthName])
 {
@@ -51,12 +60,12 @@ void CorridorScanComplexItem::save(QJsonArray&  planItems)
     planItems.append(saveObject);
 }
 
-void CorridorScanComplexItem::savePreset(const QString& presetName)
+void CorridorScanComplexItem::savePreset(const QString& name)
 {
     QJsonObject saveObject;
 
     _saveCommon(saveObject);
-    _savePresetJson(presetName, saveObject);
+    _savePresetJson(name, saveObject);
 }
 
 void CorridorScanComplexItem::_saveCommon(QJsonObject& saveObject)
@@ -67,18 +76,18 @@ void CorridorScanComplexItem::_saveCommon(QJsonObject& saveObject)
     saveObject[VisualMissionItem::jsonTypeKey] =                VisualMissionItem::jsonTypeComplexItemValue;
     saveObject[ComplexMissionItem::jsonComplexItemTypeKey] =    jsonComplexItemTypeValue;
     saveObject[corridorWidthName] =                             _corridorWidthFact.rawValue().toDouble();
-    saveObject[_jsonEntryPointKey] =                            static_cast<int>(_entryPointLocation);
+    saveObject[_jsonEntryPointKey] =                            _entryPoint;
 
     _corridorPolyline.saveToJson(saveObject);
 }
 
-void CorridorScanComplexItem::loadPreset(const QString& presetName)
+void CorridorScanComplexItem::loadPreset(const QString& name)
 {
     QString errorString;
 
-    QJsonObject presetObject = _loadPresetJson(presetName);
+    QJsonObject presetObject = _loadPresetJson(name);
     if (!_loadWorker(presetObject, 0, errorString, true /* forPresets */)) {
-        qgcApp()->showAppMessage(QStringLiteral("Internal Error: Preset load failed. Name: %1 Error: %2").arg(presetName).arg(errorString));
+        qgcApp()->showAppMessage(QStringLiteral("Internal Error: Preset load failed. Name: %1 Error: %2").arg(name).arg(errorString));
     }
     _rebuildTransects();
 }
@@ -131,7 +140,7 @@ bool CorridorScanComplexItem::_loadWorker(const QJsonObject& complexObject, int 
 
     _corridorWidthFact.setRawValue(complexObject[corridorWidthName].toDouble());
 
-    _entryPointLocation = static_cast<EntryPointLocation>(complexObject[_jsonEntryPointKey].toInt());
+    _entryPoint = complexObject[_jsonEntryPointKey].toInt();
 
     _ignoreRecalc = false;
 
@@ -169,20 +178,10 @@ void CorridorScanComplexItem::_polylineDirtyChanged(bool dirty)
 
 void CorridorScanComplexItem::rotateEntryPoint(void)
 {
-    int modeAsInt = static_cast<int>(_entryPointLocation);
-
-    if (_calcTransectCount() < 2) {
-        // A single transect has no "opposite side of center" so we need to bump by 2 to get to the opposite end of the scan
-        modeAsInt += 2;
-    } else {
-        modeAsInt++;
+    _entryPoint++;
+    if (_entryPoint > 3) {
+        _entryPoint = 0;
     }
-
-    if (modeAsInt > EntryPointStartOppositeEndOppositeSide) {
-        modeAsInt = 0;
-    }
-
-    _entryPointLocation = static_cast<EntryPointLocation>(modeAsInt);
 
     _rebuildTransects();
 }
@@ -264,8 +263,8 @@ void CorridorScanComplexItem::_rebuildTransectsPhase1(void)
                 double azimuth = transectCoords[0].azimuthTo(transectCoords[1]);
                 turnaroundCoord = transectCoords[0].atDistanceAndAzimuth(-turnAroundDistance, azimuth);
                 turnaroundCoord.setAltitude(qQNaN());
-                TransectStyleComplexItem::CoordInfo_t turnaroundCoordInfo = { turnaroundCoord, CoordTypeTurnaround };
-                transect.prepend(turnaroundCoordInfo);
+                TransectStyleComplexItem::CoordInfo_t coordInfo = { turnaroundCoord, CoordTypeTurnaround };
+                transect.prepend(coordInfo);
 
                 azimuth = transectCoords.last().azimuthTo(transectCoords[transectCoords.count() - 2]);
                 turnaroundCoord = transectCoords.last().atDistanceAndAzimuth(-turnAroundDistance, azimuth);
@@ -293,20 +292,20 @@ void CorridorScanComplexItem::_rebuildTransectsPhase1(void)
 
         bool reverseTransects = false;
         bool reverseVertices = false;
-        switch (_entryPointLocation) {
-        case EntryPointDefaultOrder:
+        switch (_entryPoint) {
+        case 0:
             reverseTransects = false;
             reverseVertices = false;
             break;
-        case EntryPointStartSameEndOppositeSide:
+        case 1:
             reverseTransects = true;
             reverseVertices = false;
             break;
-        case EntryPointStartOppositeEndSameSide:
+        case 2:
             reverseTransects = false;
             reverseVertices = true;
             break;
-        case EntryPointStartOppositeEndOppositeSide:
+        case 3:
             reverseTransects = true;
             reverseVertices = true;
             break;
@@ -385,11 +384,11 @@ double CorridorScanComplexItem::timeBetweenShots(void)
 double CorridorScanComplexItem::_calcTransectSpacing(void) const
 {
     double transectSpacing = _cameraCalc.adjustedFootprintSide()->rawValue().toDouble();
-    if (transectSpacing < _minimumTransectSpacingMeters) {
+    if (transectSpacing < 0.5) {
         // We can't let spacing get too small otherwise we will end up with too many transects.
-        // So we limit the spacing to be above a small increment and below that value we set to huge spacing
-        // which will cause a single transect to be added instead of having things blow up.
-        transectSpacing = _forceLargeTransectSpacingMeters;
+        // So we limit to 0.5 meter spacing as min and set to huge value which will cause a single
+        // transect to be added.
+        transectSpacing = 100000;
     }
 
     return transectSpacing;

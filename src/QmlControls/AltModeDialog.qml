@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -5,9 +14,10 @@ import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
 
 QGCPopupDialog {
-    title:   qsTr("Altitude Mode")
+    title:   qsTr("Select Altitude Mode")
     buttons: Dialog.Close
 
     property var rgRemoveModes
@@ -30,6 +40,7 @@ QGCPopupDialog {
             }
         }
 
+
         buttonRepeater.model = buttonModel
     }
 
@@ -37,39 +48,34 @@ QGCPopupDialog {
         id: buttonModel
 
         ListElement {
-            modeName:   qsTr("Relative")
-            help:       qsTr("Altitude above home position")
+            modeName:   qsTr("Relative To Launch")
+            help:       qsTr("Specified altitudes are relative to launch position height.")
             modeValue:  QGroundControl.AltitudeModeRelative
         }
         ListElement {
-            modeName:   qsTr("Absolute")
-            help:       qsTr("Altitude above mean sea level (AMSL)")
+            modeName:   qsTr("AMSL")
+            help:       qsTr("Specified altitudes are Above Mean Sea Level.")
             modeValue:  QGroundControl.AltitudeModeAbsolute
         }
         ListElement {
-            modeName:   qsTr("Terrain")
-            help:       qsTr("Altitude above terrain at waypoint")
-            modeValue:  QGroundControl.AltitudeModeTerrainFrame
-        }
-        ListElement {
-            modeName:   qsTr("Terrain Calculated")
-            help:       qsTr("Altitudes are terrain-relative; converting to AMSL before upload")
+            modeName:   qsTr("Calculated Above Terrain")
+            help:       qsTr("Specified altitudes are distance above terrain. Actual altitudes sent to vehicle are calculated from terrain data and sent as AMSL values.")
             modeValue:  QGroundControl.AltitudeModeCalcAboveTerrain
         }
         ListElement {
-            modeName:   qsTr("Waypoint Defined")
-            help:       qsTr("Each waypoint specifies its own altitude mode")
+            modeName:   qsTr("Terrain Frame")
+            help:       qsTr("Specified altitudes are distance above terrain. The actual altitude flown is controlled by the vehicle either from terrain height maps being sent to vehicle or a distance sensor.")
+            modeValue:  QGroundControl.AltitudeModeTerrainFrame
+        }
+        ListElement {
+            modeName:   qsTr("Mixed Modes")
+            help:       qsTr("The altitude mode can differ for each individual item.")
             modeValue:  QGroundControl.AltitudeModeMixed
         }
     }
 
     Column {
         spacing: ScreenTools.defaultFontPixelWidth
-
-        QGCLabel {
-            text: qsTr("Altitude mode for mission items")
-            font.pointSize: ScreenTools.smallFontPointSize
-        }
 
         Repeater {
             id: buttonRepeater

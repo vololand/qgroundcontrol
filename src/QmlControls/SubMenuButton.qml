@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 
-import QGroundControl
-import QGroundControl.Controls
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
 
 // Important Note: SubMenuButtons must manage their checked state manually in order to support
 // view switch prevention. This means they can't be checkable or autoExclusive.
@@ -64,9 +64,12 @@ Button {
 
         QGCLabel {
             id:                     titleBar
-            anchors.leftMargin:     ScreenTools.defaultFontPixelWidth
             anchors.left:           image.right
+            anchors.right:          parent.right              // 텍스트 영역을 버튼 오른쪽 끝까지 확장 (가로 중앙 정렬용)
+            anchors.leftMargin:     ScreenTools.defaultFontPixelWidth
+            anchors.rightMargin:    ScreenTools.defaultFontPixelWidth   // 오른쪽 여백 (좌측과 동일)
             anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment:    Text.AlignHCenter         // 텍스트 가로 중앙 정렬
             verticalAlignment:      TextEdit.AlignVCenter
             color:                  showHighlight ? qgcPal.buttonHighlightText : qgcPal.buttonText
             text:                   control.text

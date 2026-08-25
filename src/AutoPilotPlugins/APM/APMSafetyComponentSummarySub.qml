@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Controls
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import QGroundControl.Palette
 
 Item {
     anchors.fill:   parent
@@ -31,23 +33,14 @@ Item {
     property Fact _failsafeBatteryVoltage:       controller.getParameterFact(-1, "r.BATT_LOW_VOLT", false)
     property Fact _failsafeBatteryCapacity:      controller.getParameterFact(-1, "r.BATT_LOW_MAH", false)
 
-    // Older firmwares use ARMING_CHECK. Newer firmwares use ARMING_SKIPCHK.
-    property Fact _armingCheck:     controller.getParameterFact(-1, "ARMING_CHECK", false /* reportMissing */)
-    property Fact _armingSkipCheck: controller.getParameterFact(-1, "ARMING_SKIPCHK", false /* reportMissing */)
+    property Fact _armingCheck: controller.getParameterFact(-1, "ARMING_CHECK")
 
     Column {
         anchors.fill:       parent
 
         VehicleSummaryRow {
             labelText: qsTr("Arming Checks:")
-            valueText: {
-                if (_armingCheck) {
-                    return _armingCheck.value & 1 ? qsTr("Enabled") : qsTr("Some disabled")
-                } else if (_armingSkipCheck) {
-                    return _armingSkipCheck.value === 0 ? qsTr("Enabled") : qsTr("Some disabled")
-                }
-                return ""
-            }
+            valueText:  _armingCheck.value & 1 ? qsTr("Enabled") : qsTr("Some disabled")
         }
         VehicleSummaryRow {
             labelText: qsTr("GCS failsafe:")

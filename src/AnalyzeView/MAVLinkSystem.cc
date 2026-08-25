@@ -1,12 +1,21 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "MAVLinkSystem.h"
 #include "MAVLinkMessage.h"
 #include "QGCLoggingCategory.h"
 
-QGC_LOGGING_CATEGORY(MAVLinkSystemLog, "AnalyzeView.MAVLinkSystem")
+QGC_LOGGING_CATEGORY(MAVLinkSystemLog, "qgc.analyzeview.mavlinksystem")
 
 QGCMAVLinkSystem::QGCMAVLinkSystem(quint8 id, QObject *parent)
     : QObject(parent)
-    , _systemID(id)
+    , _id(id)
     , _messages(new QmlObjectListModel(this))
 {
     qCDebug(MAVLinkSystemLog) << "New Vehicle:" << id;

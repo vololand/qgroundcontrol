@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "MAVLinkMessageField.h"
 #include "MAVLinkChartController.h"
 #include "MAVLinkMessage.h"
@@ -7,7 +16,7 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QAbstractSeries>
 
-QGC_LOGGING_CATEGORY(MAVLinkMessageFieldLog, "AnalyzeView.MAVLinkMessageField")
+QGC_LOGGING_CATEGORY(MAVLinkMessageFieldLog, "qgc.analyzeview.mavlinkmessagefield")
 
 QGCMAVLinkMessageField::QGCMAVLinkMessageField(const QString &name, const QString &type, QGCMAVLinkMessage *parent)
     : QObject(parent)
@@ -25,13 +34,13 @@ QGCMAVLinkMessageField::~QGCMAVLinkMessageField()
     // qCDebug(MAVLinkMessageFieldLog) << Q_FUNC_INFO << this;
 }
 
-void QGCMAVLinkMessageField::addSeries(MAVLinkChartController *chartController, QAbstractSeries *series)
+void QGCMAVLinkMessageField::addSeries(MAVLinkChartController *chart, QAbstractSeries *series)
 {
     if (_pSeries) {
         return;
     }
 
-    _chartController = chartController;
+    _chart = chart;
     _pSeries = series;
     emit seriesChanged();
 
@@ -49,7 +58,7 @@ void QGCMAVLinkMessageField::delSeries()
     QLineSeries *const lineSeries = static_cast<QLineSeries*>(_pSeries);
     lineSeries->replace(_values);
     _pSeries = nullptr;
-    _chartController = nullptr;
+    _chart = nullptr;
     emit seriesChanged();
     _msg->updateFieldSelection();
 }
@@ -69,8 +78,8 @@ void QGCMAVLinkMessageField::setSelectable(bool sel)
 
 int QGCMAVLinkMessageField::chartIndex() const
 {
-    if (_chartController) {
-        return _chartController->chartIndex();
+    if (_chart) {
+        return _chart->chartIndex();
     }
 
     return 0;
@@ -83,7 +92,7 @@ void QGCMAVLinkMessageField::updateValue(const QString &newValue, qreal v)
         emit valueChanged();
     }
 
-    if (!_pSeries || !_chartController) {
+    if (!_pSeries || !_chart) {
         return;
     }
 
@@ -100,19 +109,19 @@ void QGCMAVLinkMessageField::updateValue(const QString &newValue, qreal v)
         _dataIndex++;
     }
 
-    if (_chartController->rangeYIndex() != 0) {
+    if (_chart->rangeYIndex() != 0) {
         return;
     }
 
     qreal vmin = std::numeric_limits<qreal>::max();
     qreal vmax = std::numeric_limits<qreal>::min();
     for (const QPointF &point : _values) {
-        const qreal value = point.y();
-        if (vmax < value) {
-            vmax = value;
+        const qreal v = point.y();
+        if (vmax < v) {
+            vmax = v;
         }
-        if (vmin > value) {
-            vmin = value;
+        if (vmin > v) {
+            vmin = v;
         }
     }
 
@@ -128,7 +137,7 @@ void QGCMAVLinkMessageField::updateValue(const QString &newValue, qreal v)
     }
 
     if (changed) {
-        _chartController->updateYRange();
+        _chart->updateYRange();
     }
 }
 

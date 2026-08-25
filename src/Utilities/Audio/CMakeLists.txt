@@ -1,8 +1,3 @@
-# ============================================================================
-# Audio Subsystem
-# Audio output and notification sounds
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         AudioOutput.cc

@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 
-import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import QGroundControl.Palette
 
 Item {
     anchors.fill:   parent

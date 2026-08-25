@@ -1,13 +1,19 @@
-#pragma once
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-#include "LinkConfiguration.h"
-#include "LinkInterface.h"
+#pragma once
 
 #include <QtCore/QFile>
 #include <QtCore/QLoggingCategory>
-#include <QtQmlIntegration/QtQmlIntegration>
 
-#include <atomic>
+#include "LinkConfiguration.h"
+#include "LinkInterface.h"
 
 class QTimer;
 
@@ -20,8 +26,7 @@ Q_DECLARE_LOGGING_CATEGORY(LogReplayLinkLog)
 class LogReplayConfiguration : public LinkConfiguration
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+
     Q_PROPERTY(QString filename READ logFilename WRITE setLogFilename NOTIFY filenameChanged)
 
 public:
@@ -124,11 +129,11 @@ public:
     explicit LogReplayLink(SharedLinkConfigurationPtr &config, QObject *parent = nullptr);
     virtual ~LogReplayLink();
 
-    bool isConnected() const override;
+    bool isConnected() const override { return _worker->isConnected(); }
     void disconnect() override;
     bool isLogReplay() const final { return true; }
 
-    bool isPlaying() const;
+    bool isPlaying() const { return _worker->isPlaying(); }
     void play();
     void pause();
     void setPlaybackSpeed(qreal playbackSpeed);
@@ -144,8 +149,8 @@ signals:
 
 private slots:
     void _writeBytes(const QByteArray &bytes) override { Q_UNUSED(bytes); }
-    void _onConnected();
-    void _onDisconnected();
+    void _onConnected() { emit connected(); }
+    void _onDisconnected() { emit disconnected(); }
     void _onErrorOccurred(const QString &errorString);
     void _onDataReceived(const QByteArray &data);
 
@@ -155,5 +160,4 @@ private:
     const LogReplayConfiguration *_logReplayConfig = nullptr;
     LogReplayWorker *_worker = nullptr;
     QThread *_workerThread = nullptr;
-    std::atomic<bool> _disconnectedEmitted{false};
 };

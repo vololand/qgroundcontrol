@@ -1,9 +1,10 @@
 import QtQuick
 
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
 import QGroundControl
-import QGroundControl.Controls
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
-
 Item {
     id: root
 
@@ -27,10 +28,7 @@ Item {
         return ""
     }
 
-    Component.onCompleted: {
-        console.log(getImage())
-        subImage.source = getImage()
-    }
+    Component.onCompleted: subImage.source = getImage()
 
     Image {
         id: subImage

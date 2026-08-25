@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 //-----------------------------------------------------------------------------
 // Our pipeline look like this:
 //
@@ -14,11 +23,39 @@
 
 #include <QtCore/QDateTime>
 #include <QtCore/QUrl>
+#include <QtCore/QUrlQuery>
 #include <QtQuick/QQuickItem>
 
 #include <gst/gst.h>
+#include <gst/gsterror.h>
+#include <gst/rtsp/gstrtsptransport.h>
 
-QGC_LOGGING_CATEGORY(GstVideoReceiverLog, "Video.GstVideoReceiver")
+QGC_LOGGING_CATEGORY(GstVideoReceiverLog, "qgc.videomanager.videoreceiver.gstreamer.gstvideoreceiver")
+
+namespace {
+// rtspsrc "select-stream" 콜백: 비디오 스트림만 SETUP하고 오디오/기타(application 등)는 제외한다.
+// VLC 등 오디오+비디오를 함께 송출하는 서버에서, 미연결 오디오 pad로 인한
+// not-linked 파이프라인 에러(영상 미재생)를 원천 차단하기 위함.
+gboolean _qgcRtspSelectVideoStream(GstElement *src, guint num, GstCaps *caps, gpointer user_data)
+{
+    Q_UNUSED(src);
+    Q_UNUSED(num);
+    Q_UNUSED(user_data);
+
+    if (!caps) {
+        return TRUE;
+    }
+
+    const GstStructure *structure = gst_caps_get_structure(caps, 0);
+    if (!structure) {
+        return TRUE;
+    }
+
+    const gchar *media = gst_structure_get_string(structure, "media");
+    // media 필드가 없으면(판별 불가) 유지, 있으면 video일 때만 유지.
+    return (!media || (g_strcmp0(media, "video") == 0)) ? TRUE : FALSE;
+}
+} // namespace
 
 GstVideoReceiver::GstVideoReceiver(QObject *parent)
     : VideoReceiver(parent)
@@ -230,12 +267,10 @@ void GstVideoReceiver::stop()
     qCDebug(GstVideoReceiverLog) << "Stopping" << _uri;
 
     if (_teeProbeId != 0) {
-        if (_tee) {
-            GstPad *sinkpad = gst_element_get_static_pad(_tee, "sink");
-            if (sinkpad) {
-                gst_pad_remove_probe(sinkpad, _teeProbeId);
-                gst_clear_object(&sinkpad);
-            }
+        GstPad *sinkpad = gst_element_get_static_pad(_tee, "sink");
+        if (sinkpad) {
+            gst_pad_remove_probe(sinkpad, _teeProbeId);
+            gst_clear_object(&sinkpad);
         }
         _teeProbeId = 0;
     }
@@ -652,10 +687,38 @@ GstElement *GstVideoReceiver::_makeSource(const QString &input)
                 break;
             }
 
+            // rtsp_transport는 QGC 로컬 옵션이다. rtspsrc location에는 전달하지 않는다.
+            const QString rtpTransport =
+                QUrlQuery(sourceUrl).queryItemValue(QStringLiteral("rtsp_transport")).trimmed().toLower();
+            const QUrl locationUrl = sourceUrl.adjusted(QUrl::RemoveQuery | QUrl::RemoveFragment);
+            const QString rtspLocation = locationUrl.toString();
+
+            // RTSP 제어는 TCP를 사용하고, RTP 하위 전송은 URL 옵션(udp/tcp/auto)으로 선택한다.
+            const int latencyMs = lowLatency() ? 10 : 25;
             g_object_set(source,
-                         "location", input.toUtf8().constData(),
-                         "latency", 25,
+                         "location", rtspLocation.toUtf8().constData(),
+                         "latency", latencyMs,
                          nullptr);
+
+            guint rtpProtocols = 0;
+            if (rtpTransport == QLatin1String("udp")) {
+                rtpProtocols = GST_RTSP_LOWER_TRANS_UDP;
+            } else if (rtpTransport == QLatin1String("tcp")) {
+                rtpProtocols = GST_RTSP_LOWER_TRANS_TCP;
+            } else if (rtpTransport == QLatin1String("auto")) {
+                rtpProtocols = GST_RTSP_LOWER_TRANS_UDP | GST_RTSP_LOWER_TRANS_TCP;
+            } else if (!rtpTransport.isEmpty()) {
+                qCWarning(GstVideoReceiverLog) << "Unsupported RTP transport, using rtspsrc default:" << rtpTransport;
+            }
+
+            if (rtpProtocols != 0) {
+                g_object_set(source,
+                             "protocols", rtpProtocols,
+                             nullptr);
+            }
+
+            // 비디오 스트림만 SETUP (오디오 등 제외) — 미연결 pad로 인한 not-linked 방지
+            (void) g_signal_connect(source, "select-stream", G_CALLBACK(_qgcRtspSelectVideoStream), nullptr);
         } else if (isTcpMPEGTS) {
             source = gst_element_factory_make("tcpclientsrc", "source");
             if (!source) {
@@ -677,8 +740,11 @@ GstElement *GstVideoReceiver::_makeSource(const QString &input)
             }
 
             const QString uri = QStringLiteral("udp://%1:%2").arg(sourceUrl.host(), QString::number(sourceUrl.port()));
+            // RTP 대량 수신 시 커널 수신 버퍼 부족으로 인한 패킷 손실 완화 (대역폭/수신 처리 여유 확보)
+            constexpr guint kUdpRtpRecvBufferBytes = 2 * 1024 * 1024;  // 2 MiB
             g_object_set(source,
                          "uri", uri.toUtf8().constData(),
+                         "buffer-size", kUdpRtpRecvBufferBytes,
                          nullptr);
 
             GstCaps *caps = nullptr;
@@ -757,6 +823,11 @@ GstElement *GstVideoReceiver::_makeSource(const QString &input)
                     qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('rtpjitterbuffer') failed";
                     break;
                 }
+                // 지터 버퍼 대기 시간(ms): 네트워크 지터·재정렬 여유 확보로 RTP 패킷 손실 완화
+                const int jitterLatencyMs = 200;
+                g_object_set(buffer,
+                             "latency", jitterLatencyMs,
+                             nullptr);
 
                 (void) gst_bin_add(GST_BIN(bin), buffer);
 
@@ -911,49 +982,11 @@ void GstVideoReceiver::_onNewSourcePad(GstPad *pad)
     qCDebug(GstVideoReceiverLog) << "Decoding started" << _uri;
 }
 
-void GstVideoReceiver::_logDecodebin3SelectedCodec(GstElement *decodebin3)
-{
-    GValue value = G_VALUE_INIT;
-    GstIterator *iter = gst_bin_iterate_elements(GST_BIN(decodebin3));
-    GstElement *child;
-
-    while (gst_iterator_next(iter, &value) == GST_ITERATOR_OK) {
-        child = GST_ELEMENT(g_value_get_object(&value));
-        GstElementFactory *factory = gst_element_get_factory(child);
-
-        if (factory) {
-            gboolean is_decoder = gst_element_factory_list_is_type(factory, GST_ELEMENT_FACTORY_TYPE_DECODER);
-            if (is_decoder) {
-                const gchar *decoderKlass = gst_element_factory_get_klass(factory);
-                GstPluginFeature *feature = GST_PLUGIN_FEATURE(factory);
-                const gchar *featureName = gst_plugin_feature_get_name(feature);
-                const guint rank = gst_plugin_feature_get_rank(feature);
-                bool isHardwareDecoder = GStreamer::is_hardware_decoder_factory(factory);
-
-                QString pluginName = featureName;
-                GstPlugin *plugin = gst_plugin_feature_get_plugin(feature);
-                if (plugin) {
-                    pluginName = gst_plugin_get_name(plugin);
-                    gst_object_unref(plugin);
-                }
-                qCDebug(GstVideoReceiverLog) << "Decodebin3 selected codec:rank -" << pluginName << "/" << featureName << "-" << decoderKlass << (isHardwareDecoder ? "(HW)" : "(SW)") << ":" << rank;
-            }
-        }
-        g_value_reset(&value);
-    }
-    g_value_unset(&value);
-    gst_iterator_free(iter);
-}
-
-
 void GstVideoReceiver::_onNewDecoderPad(GstPad *pad)
 {
     qCDebug(GstVideoReceiverLog) << "_onNewDecoderPad" << _uri;
 
     GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-with-new-decoder-pad");
-
-    // We should now know what codec decodebin3 selected.
-    _logDecodebin3SelectedCodec(_decoder);
 
     if (!_addVideoSink(pad)) {
         qCCritical(GstVideoReceiverLog) << "_addVideoSink() failed";
@@ -1049,45 +1082,20 @@ bool GstVideoReceiver::_addVideoSink(GstPad *pad)
 
     GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-with-videosink");
 
-    // Determine video size. Errors here are non-fatal.
-    QSize videoSize;
-    do {
-        if (!_decoderValve) {
-            qCCritical(GstVideoReceiverLog) << "Unable to determine video size - _decoderValve is NULL" << _uri;
-            break;
-        }
-
+    if (_decoderValve) {
+        // Extracting video size from source is more guaranteed
         GstPad *valveSrcPad = gst_element_get_static_pad(_decoderValve, "src");
-        if (!valveSrcPad) {
-            qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad() failed";
-            break;
-        }
-
-        GstCaps *valveSrcPadCaps = gst_pad_query_caps(valveSrcPad, nullptr);
-        if (!valveSrcPadCaps) {
-            qCCritical(GstVideoReceiverLog) << "gst_pad_query_caps() failed";
-            gst_clear_object(&valveSrcPad);
-            break;
-        }
-
+        const GstCaps *valveSrcPadCaps = gst_pad_query_caps(valveSrcPad, nullptr);
         const GstStructure *structure = gst_caps_get_structure(valveSrcPadCaps, 0);
-        if (!structure) {
-            qCCritical(GstVideoReceiverLog) << "Unable to determine video size - structure is NULL" << _uri;
-            gst_clear_object(&valveSrcPad);
-            break;
+        if (structure) {
+            gint width, height;
+            (void) gst_structure_get_int(structure, "width", &width);
+            (void) gst_structure_get_int(structure, "height", &height);
+            _dispatchSignal([this, width, height]() { emit videoSizeChanged(QSize(width, height)); });
         }
-
-        gint width = 0;
-        gint height = 0;
-        (void) gst_structure_get_int(structure, "width", &width);
-        (void) gst_structure_get_int(structure, "height", &height);
-        videoSize.setWidth(width);
-        videoSize.setHeight(height);
-
-        gst_clear_caps(&valveSrcPadCaps);
-        gst_clear_object(&valveSrcPad);
-    } while (false);
-    _dispatchSignal([this, videoSize]() { emit videoSizeChanged(videoSize); });
+    } else {
+        _dispatchSignal([this]() { emit videoSizeChanged(QSize()); });
+    }
 
     gst_clear_caps(&caps);
     return true;
@@ -1244,7 +1252,7 @@ gboolean GstVideoReceiver::_onBusMessage(GstBus * /* bus */, GstMessage *msg, gp
     switch (GST_MESSAGE_TYPE(msg)) {
     case GST_MESSAGE_ERROR: {
         gchar *debug;
-        GError *error;
+        GError *error = nullptr;
         gst_message_parse_error(msg, &error, &debug);
 
         if (debug) {
@@ -1252,15 +1260,30 @@ gboolean GstVideoReceiver::_onBusMessage(GstBus * /* bus */, GstMessage *msg, gp
             g_clear_pointer(&debug, g_free);
         }
 
+        const bool isStreamError = (error && error->domain == gst_stream_error_quark());
         if (error) {
-            qCCritical(GstVideoReceiverLog) << "GStreamer error:" << error->message;
+            qCWarning(GstVideoReceiverLog) << "GStreamer error:" << error->message;
+            if (isStreamError) {
+                qCDebug(GstVideoReceiverLog) << "Stream/decode error — flush and continue (invalid packet discarded)";
+            }
             g_clear_error(&error);
         }
 
-        pThis->_worker->dispatch([pThis]() {
-            qCDebug(GstVideoReceiverLog) << "Stopping because of error";
-            pThis->stop();
-        });
+        if (isStreamError) {
+            // 잘못된 패킷 등으로 디코드/스트림 에러 시 파이프라인 정지 대신 플러시 후 재생 계속
+            pThis->_worker->dispatch([pThis]() {
+                if (pThis->_pipeline) {
+                    (void) gst_element_send_event(pThis->_pipeline, gst_event_new_flush_start());
+                    (void) gst_element_send_event(pThis->_pipeline, gst_event_new_flush_stop(TRUE));
+                    qCDebug(GstVideoReceiverLog) << "Pipeline flushed, continuing";
+                }
+            });
+        } else {
+            pThis->_worker->dispatch([pThis]() {
+                qCDebug(GstVideoReceiverLog) << "Stopping because of error";
+                pThis->stop();
+            });
+        }
         break;
     }
     case GST_MESSAGE_EOS:
@@ -1378,7 +1401,15 @@ gboolean GstVideoReceiver::_padProbe(GstElement *element, GstPad *pad, gpointer 
 
 GstPadProbeReturn GstVideoReceiver::_teeProbe(GstPad *pad, GstPadProbeInfo *info, gpointer user_data)
 {
-    Q_UNUSED(pad); Q_UNUSED(info)
+    Q_UNUSED(pad);
+
+    // 잘못된 패킷은 버려서 영상 멈춤 방지 (RTSP 등에서 손상 패킷 수신 시)
+    if (info) {
+        GstBuffer *buf = gst_pad_probe_info_get_buffer(info);
+        if (!buf || gst_buffer_get_size(buf) == 0) {
+            return GST_PAD_PROBE_DROP;
+        }
+    }
 
     if (user_data) {
         GstVideoReceiver *pThis = static_cast<GstVideoReceiver*>(user_data);

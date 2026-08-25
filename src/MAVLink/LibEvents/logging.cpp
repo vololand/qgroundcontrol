@@ -1,8 +1,17 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include <QGCLoggingCategory.h>
 
 #include "libevents_includes.h"
 
-QGC_LOGGING_CATEGORY(EventsLog, "API.Events")
+QGC_LOGGING_CATEGORY(EventsLog, "EventsLog");
 
 void qgc_events_parser_debug_printf(const char *fmt, ...) {
     char msg[256];

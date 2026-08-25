@@ -1,8 +1,3 @@
-# ============================================================================
-# GStreamer QGC Video Sink Plugin
-# Custom GStreamer elements for QGC video streaming
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         gstqgc.cc

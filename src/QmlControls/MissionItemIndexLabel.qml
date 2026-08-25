@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 
-import QGroundControl
-import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 
 Canvas {
     id:     root
@@ -28,7 +28,8 @@ Canvas {
     property bool   showSequenceNumbers:    true
 
     property real   _width:             showGimbalYaw ? Math.max(_gimbalYawWidth, labelControl.visible ? labelControl.width : indicator.width) : (labelControl.visible ? labelControl.width : indicator.width)
-    property real   _height:            showGimbalYaw ? _gimbalYawWidth : (labelControl.visible ? labelControl.height : indicator.height)
+    // implicitHeight breaks binding loop: labelControl.height depends on layout which can depend on _height
+    property real   _height:            showGimbalYaw ? _gimbalYawWidth : (labelControl.visible ? Math.max(indicator.height, labelControlLabel.implicitHeight + _labelMargin * 2) : indicator.height)
     property real   _gimbalYawRadius:   ScreenTools.defaultFontPixelHeight
     property real   _gimbalYawWidth:    _gimbalYawRadius * 2
     property real   _smallRadiusRaw:    Math.ceil((ScreenTools.defaultFontPixelHeight * ScreenTools.smallFontPointRatio) / 2)
@@ -72,6 +73,8 @@ Canvas {
         context.clearRect(0, 0, width, height)
         paintGimbalYaw(context)
     }
+
+    Behavior on _indicatorRadius { PropertyAnimation {} }
 
     Rectangle {
         id:                     labelControl
