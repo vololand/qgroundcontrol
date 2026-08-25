@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "ParameterEditorController.h"
 #include "QGCApplication.h"
 #include "ParameterManager.h"
@@ -5,7 +14,7 @@
 #include "Vehicle.h"
 #include "QGCLoggingCategory.h"
 
-QGC_LOGGING_CATEGORY(ParameterEditorControllerLog, "QMLControls.ParameterEditorController")
+QGC_LOGGING_CATEGORY(ParameterEditorControllerLog, "qgc.qmlcontrols.parametereditorcontroller")
 
 ParameterTableModel::ParameterTableModel(QObject* parent)
     : QAbstractTableModel(parent)
@@ -15,7 +24,7 @@ ParameterTableModel::ParameterTableModel(QObject* parent)
 
 ParameterTableModel::~ParameterTableModel()
 {
-
+    
 }
 
 int ParameterTableModel::rowCount(const QModelIndex& /*parent*/) const
@@ -33,14 +42,14 @@ QVariant ParameterTableModel::data(const QModelIndex &index, int role) const
     if (!index.isValid()) {
         return QVariant();
     }
-
+    
     if (index.row() < 0 || index.row() >= _tableData.count()) {
         return QVariant();
     }
     if (index.column() < 0 || index.column() >= _tableViewColCount) {
         return QVariant();
     }
-
+    
     switch (role) {
         case Qt::DisplayRole:
             return QVariant::fromValue(_tableData[index.row()][index.column()]);
@@ -53,7 +62,7 @@ QVariant ParameterTableModel::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> ParameterTableModel::roleNames() const
 {
-    return {
+    return { 
         {Qt::DisplayRole, "display"},
         {FactRole, "fact"}
     };
@@ -61,9 +70,14 @@ QHash<int, QByteArray> ParameterTableModel::roleNames() const
 
 void ParameterTableModel::clear()
 {
-    beginReset();
+    if (!_externalBeginResetModel) {
+        beginResetModel();
+    }
     _tableData.clear();
-    endReset();
+    if (!_externalBeginResetModel) {
+        endResetModel();
+        emit rowCountChanged(0);
+    }
 }
 
 void ParameterTableModel::append(Fact* fact)
@@ -83,36 +97,29 @@ void ParameterTableModel::insert(int row, Fact* fact)
     colData[ValueColumn] = QVariant::fromValue(fact);
     colData[DescriptionColumn] = fact->shortDescription();
 
-    if (!_isResetting()) {
-        beginInsertRows(QModelIndex(), row, row);
-    }
+    beginInsertRows(QModelIndex(), row, row);
     _tableData.insert(row, colData);
-    if (!_isResetting()) {
-        endInsertRows();
-        emit rowCountChanged(rowCount());
-    }
+    endInsertRows();
+
+    emit rowCountChanged(rowCount());
 }
 
 void ParameterTableModel::beginReset()
 {
-    _resetNestingCount++;
-
-    if (_resetNestingCount == 1) {
-        beginResetModel();
+    if (_externalBeginResetModel) {
+        qWarning() << "ParameterTableModel::beginReset already set";
     }
+    _externalBeginResetModel = true;
+    beginResetModel();
 }
 
 void ParameterTableModel::endReset()
 {
-    if (_resetNestingCount == 0) {
-        qWarning() << "ParameterTableModel::endReset called without prior beginReset";
-        return;
+    if (!_externalBeginResetModel) {
+        qWarning() << "ParameterTableModel::endReset begin not set";
     }
-    _resetNestingCount--;
-    if (_resetNestingCount == 0) {
-        endResetModel();
-        emit rowCountChanged(rowCount());
-    }
+    _externalBeginResetModel = false;
+    endResetModel();
 }
 
 Fact* ParameterTableModel::factAt(int row) const
@@ -126,9 +133,9 @@ Fact* ParameterTableModel::factAt(int row) const
 }
 
 
-ParameterEditorGroup::ParameterEditorGroup(QObject* parent)
-    : QObject(parent)
-{
+ParameterEditorGroup::ParameterEditorGroup(QObject* parent) 
+    : QObject(parent) 
+{ 
 
 }
 
@@ -338,7 +345,7 @@ void ParameterEditorController::sendDiff(void)
 
         if (paramDiff->load) {
             if (paramDiff->noVehicleValue) {
-                _parameterMgr->_mavlinkParamSet(paramDiff->componentId, paramDiff->name, paramDiff->valueType, paramDiff->fileValueVar);
+                _parameterMgr->_factRawValueUpdateWorker(paramDiff->componentId, paramDiff->name, paramDiff->valueType, paramDiff->fileValueVar);
             } else {
                 Fact* fact = _parameterMgr->getParameter(paramDiff->componentId, paramDiff->name);
                 fact->setRawValue(paramDiff->fileValueVar);
@@ -507,7 +514,7 @@ void ParameterEditorController::_performSearch(void)
                                 !fact->shortDescription().contains(searchItem, Qt::CaseInsensitive) &&
                                 !fact->longDescription().contains(searchItem, Qt::CaseInsensitive)) {
                             matched = false;
-                        }
+                        }                    
                     }
                 }
             }

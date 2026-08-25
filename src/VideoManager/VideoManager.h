@@ -1,13 +1,23 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
 #include <QtCore/QRunnable>
 #include <QtCore/QSize>
-#include <QtQmlIntegration/QtQmlIntegration>
+// #include <QtQmlIntegration/QtQmlIntegration>
 
 Q_DECLARE_LOGGING_CATEGORY(VideoManagerLog)
 
+class QQuickItem;
 class QQuickWindow;
 class FinishVideoInitialization;
 class SubtitleWriter;
@@ -18,10 +28,9 @@ class VideoSettings;
 class VideoManager : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+    // QML_ELEMENT
+    // QML_UNCREATABLE("")
     Q_MOC_INCLUDE("Vehicle.h")
-
     Q_PROPERTY(bool     gstreamerEnabled        READ gstreamerEnabled                           CONSTANT)
     Q_PROPERTY(bool     qtmultimediaEnabled     READ qtmultimediaEnabled                        CONSTANT)
     Q_PROPERTY(bool     uvcEnabled              READ uvcEnabled                                 CONSTANT)
@@ -46,17 +55,21 @@ public:
     explicit VideoManager(QObject *parent = nullptr);
     ~VideoManager();
 
-    friend class FinishVideoInitialization;
-
     static VideoManager *instance();
+    static void registerQmlTypes();
 
     Q_INVOKABLE void grabImage(const QString &imageFile = QString());
     Q_INVOKABLE void startRecording(const QString &videoFile = QString());
     Q_INVOKABLE void startVideo();
     Q_INVOKABLE void stopRecording();
     Q_INVOKABLE void stopVideo();
+    /// GStreamer 빌드에서 DroneVideo 영역에 RTSP 스트림을 표시할 때 호출. widget은 GstGLQt6VideoItem 등 비디오 싱크 위젯.
+    Q_INVOKABLE void registerDroneVideoWidget(QQuickItem *widget);
+    Q_INVOKABLE void unregisterDroneVideoWidget();
+    /// 등록된 드론 비디오 위젯에 사용할 URL 설정. registerDroneVideoWidget 이후 호출. 설정의 rtsp/udp 대신 이 값 사용.
+    Q_INVOKABLE void setDroneVideoUri(const QString &uri);
 
-    void init(QQuickWindow *mainWindow);
+    void init(QQuickWindow *rootWindow);
     void cleanup();
     bool autoStreamConfigured() const;
     bool decoding() const { return _decoding; }
@@ -89,7 +102,7 @@ signals:
     void isAutoStreamChanged();
     void isStreamSourceChanged();
     void isUvcChanged();
-    void recordingChanged(bool recording);
+    void recordingChanged();
     void recordingStarted(const QString &filename);
     void streamingChanged();
     void uvcVideoSourceIDChanged();
@@ -101,7 +114,6 @@ private slots:
     void _videoSourceChanged();
 
 private:
-    void _initAfterQmlIsReady();
     void _initVideoReceiver(VideoReceiver *receiver, QQuickWindow *window);
     bool _updateAutoStream(VideoReceiver *receiver);
     bool _updateUVC(VideoReceiver *receiver);
@@ -114,12 +126,14 @@ private:
     static void _cleanupOldVideos();
 
     QList<VideoReceiver*> _videoReceivers;
+    VideoReceiver *_droneVideoReceiver = nullptr;
+    QString _droneVideoCustomUri;
+    bool _droneVideoUriOverridden = false;
 
     SubtitleWriter *_subtitleWriter = nullptr;
     VideoSettings *_videoSettings = nullptr;
 
     bool _initialized = false;
-    bool _initAfterQmlIsReadyDone = false;
     bool _fullScreen = false;
     QAtomicInteger<bool> _decoding = false;
     QAtomicInteger<bool> _recording = false;
@@ -128,7 +142,6 @@ private:
     QString _imageFile;
     QString _uvcVideoSourceID;
     Vehicle *_activeVehicle = nullptr;
-    QQuickWindow *_mainWindow = nullptr;
 };
 
 /*===========================================================================*/

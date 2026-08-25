@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QList>
@@ -153,7 +162,7 @@ public:
     virtual QString takeControlFlightMode() const { return QString(); }
 
     /// Returns whether the vehicle is in guided mode or not.
-    virtual bool isGuidedMode(const Vehicle * /*vehicle*/) const { return false; }
+    virtual bool isGuidedMode(const Vehicle *vehicle) const { return false; }
 
     /// Returns the flight mode which the vehicle will be in if it is performing a goto location
     virtual QString gotoFlightMode() const { return QString(); }
@@ -308,7 +317,7 @@ public:
     virtual const remapParamNameMajorVersionMap_t &paramNameRemapMajorVersionMap() const;
 
     /// Returns the highest major version number that is known to the remap for this specified major version.
-    virtual int remapParamNameHigestMinorVersionNumber(int /*majorVersionNumber*/) const { return 0; }
+    virtual int remapParamNameHigestMinorVersionNumber(int majorVersionNumber) const { return 0; }
 
     /// @return true: Motors are coaxial like an X8 config, false: Quadcopter for example
     virtual bool multiRotorCoaxialMotors(Vehicle* /*vehicle*/) const { return false; }
@@ -331,12 +340,18 @@ public:
     /// Return the resource file which contains the vehicle icon used in the flight view when the view is light (Map for instance)
     virtual QString vehicleImageOutline(const Vehicle* /*vehicle*/) const { return QStringLiteral("/qmlimages/vehicleArrowOutline.svg"); }
 
-    virtual QVariant expandedToolbarIndicatorSource(const Vehicle* /*vehicle*/, const QString& /*indicatorName*/) const { return QVariant(); }
+    // This is the content item for the expanded portion of the main status indicator
+    virtual QVariant mainStatusIndicatorContentItem(const Vehicle* /*vehicle*/) const { return QVariant(); }
 
     /// Returns the list of toolbar tool indicators associated with a vehicle
     ///     signals toolIndicatorsChanged
     /// @return A list of QUrl with the indicators
     virtual const QVariantList &toolIndicators(const Vehicle *vehicle);
+
+    /// Returns the list of toolbar mode indicators associated with a vehicle
+    ///     signals modeIndicatorsChanged
+    /// @return A list of QUrl with the indicators
+    virtual const QVariantList &modeIndicators(const Vehicle *vehicle);
 
     /// Creates vehicle camera manager.
     virtual QGCCameraManager *createCameraManager(Vehicle *vehicle) const;
@@ -393,6 +408,7 @@ public:
 
 signals:
     void toolIndicatorsChanged();
+    void modeIndicatorsChanged();
 
 protected:
     /// Arms the vehicle with validation and retries
@@ -448,7 +464,7 @@ public:
     // anyVersionSupportsCommand returns true if any version of the
     // firmware has supported cmd.  Used so that extra round-trips to
     // the autopilot to probe for command support are not required.
-    virtual CommandSupportedResult anyVersionSupportsCommand(MAV_CMD /*cmd*/) const { return CommandSupportedResult::UNKNOWN; }
+    virtual CommandSupportedResult anyVersionSupportsCommand(MAV_CMD cmd) const { return CommandSupportedResult::UNKNOWN; }
 
     // support for detecting whether the firmware a vehicle is running
     // supports a given MAV_CMD:

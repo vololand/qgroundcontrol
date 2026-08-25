@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include "QGCMAVLink.h"
@@ -12,7 +21,7 @@ class MissionCommandUIInfo;
 class MissionCommandList : public QObject
 {
     Q_OBJECT
-
+    
 public:
     /// @param baseCommandList true: bottomost level of mission command hierarchy (partial spec allowed), false: override level of hierarchy
     MissionCommandList(const QString& jsonFilename, bool baseCommandList, QObject* parent = nullptr);
@@ -24,7 +33,7 @@ public:
     MissionCommandUIInfo* getUIInfo(MAV_CMD command) const;
 
     const QList<MAV_CMD>& commandIds(void) const { return _ids; }
-
+    
     static constexpr const char* qgcFileType = "MavCmdInfo";
 
 private:

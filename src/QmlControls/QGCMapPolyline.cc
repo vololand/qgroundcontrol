@@ -1,7 +1,15 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "QGCMapPolyline.h"
 #include "QGCGeo.h"
 #include "JsonHelper.h"
-#include "JsonParsing.h"
 #include "QGCQGeoCoordinate.h"
 #include "QGCApplication.h"
 #include "ShapeFileHelper.h"
@@ -166,7 +174,7 @@ bool QGCMapPolyline::loadFromJson(const QJsonObject& json, bool required, QStrin
     clear();
 
     if (required) {
-        if (!JsonParsing::validateRequiredKeys(json, QStringList(jsonPolylineKey), errorString)) {
+        if (!JsonHelper::validateRequiredKeys(json, QStringList(jsonPolylineKey), errorString)) {
             return false;
         }
     } else if (!json.contains(jsonPolylineKey)) {
@@ -353,16 +361,11 @@ QList<QGeoCoordinate> QGCMapPolyline::offsetPolyline(double distance)
 bool QGCMapPolyline::loadKMLOrSHPFile(const QString &file)
 {
     QString errorString;
-    QList<QList<QGeoCoordinate>> polylines;
-    if (!ShapeFileHelper::loadPolylinesFromFile(file, polylines, errorString)) {
+    QList<QGeoCoordinate> rgCoords;
+    if (!ShapeFileHelper::loadPolylineFromFile(file, rgCoords, errorString)) {
         qgcApp()->showAppMessage(errorString);
         return false;
     }
-    if (polylines.isEmpty()) {
-        qgcApp()->showAppMessage(tr("No polylines found in file"));
-        return false;
-    }
-    const QList<QGeoCoordinate>& rgCoords = polylines.first();
 
     beginReset();
     clear();

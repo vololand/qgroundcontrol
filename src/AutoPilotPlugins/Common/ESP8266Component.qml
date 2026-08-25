@@ -1,11 +1,25 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Controllers
 
 Item {
 
@@ -49,7 +63,6 @@ Item {
             if (stStatus === XMLHttpRequest.DONE) {
                 var objectArray = JSON.parse(req.responseText);
                 if (objectArray.errors !== undefined) {
-                    console.log(qsTr("Error fetching WiFi Bridge Status: %1").arg(objectArray.errors[0].message))
                     stErrorCount = stErrorCount + 1
                     if(stErrorCount < 2)
                         timer.start()
@@ -434,7 +447,8 @@ Item {
                             visible:    false
                             buttons:    MessageDialog.Yes | MessageDialog.No
                             title:      qsTr("Reboot WiFi Bridge")
-                            text:       qsTr("This will restart the WiFi Bridge so the settings you've changed can take effect. Note that you may have to change your computer WiFi settings and QGroundControl link settings to match these changes. Are you sure you want to restart it?")
+                            //text:       qsTr("This will restart the WiFi Bridge so the settings you've changed can take effect. Note that you may have to change your computer WiFi settings and QGroundControl link settings to match these changes. Are you sure you want to restart it?")
+                            text:       qsTr("This will restart the WiFi Bridge so the settings you've changed can take effect. Note that you may have to change your computer WiFi settings and VGcs link settings to match these changes. Are you sure you want to restart it?")
                             onButtonClicked: function (button, role) {
                                 switch (button) {
                                 case MessageDialog.Yes:

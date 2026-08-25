@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "QGCLogging.h"
 #include "AppSettings.h"
 #include "QGCApplication.h"
@@ -9,7 +18,7 @@
 #include <QtCore/QStringListModel>
 #include <QtCore/QTextStream>
 
-QGC_LOGGING_CATEGORY(QGCLoggingLog, "Utilities.QGCLogging")
+QGC_LOGGING_CATEGORY(QGCLoggingLog, "QGCLoggingLog")
 
 Q_GLOBAL_STATIC(QGCLogging, _qgcLogging)
 
@@ -17,19 +26,29 @@ static QtMessageHandler defaultHandler = nullptr;
 
 static void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
-    // Call the previous handler FIRST to ensure QTest::ignoreMessage works correctly.
-    // QTest's message filtering happens in the default handler, so we must call it
-    // before any processing that might interfere with message matching.
-    if (defaultHandler) {
-        defaultHandler(type, context, msg);
+    // 카테고리가 꺼져 있어도 기본 핸들러(콘솔/디버그 출력)에는 전달 — QML console.log 등이 보이도록
+    if (!QLoggingCategory(context.category).isDebugEnabled()) {
+        if (defaultHandler)
+            defaultHandler(type, context, msg);
+        return;
     }
 
     // Format the message using Qt's pattern
     const QString message = qFormatLogMessage(type, context, msg);
 
+    // Console 페이지 자신의 바인딩 경고는 같은 목록에 넣지 않는다.
+    // 넣으면 "Unable to assign [undefined] to QString" 이 줄을 늘리고 다시 경고가 난다.
+    const QString file = QString::fromUtf8(context.file ? context.file : "");
+    const bool fromAppMessages = file.contains(QLatin1String("AppMessages.qml"));
+
     // Filter out Qt Quick internals
-    if (QGCLogging::instance() && !QString(context.category).startsWith("qt.quick")) {
+    if (!fromAppMessages && !QString(context.category).startsWith("qt.quick")) {
         QGCLogging::instance()->log(message);
+    }
+
+    // Call the previous handler if it exists
+    if (defaultHandler) {
+        defaultHandler(type, context, msg);
     }
 }
 
@@ -41,7 +60,7 @@ QGCLogging *QGCLogging::instance()
 QGCLogging::QGCLogging(QObject *parent)
     : QStringListModel(parent)
 {
-    qCDebug(QGCLoggingLog) << this;
+    // qCDebug(QGCLoggingLog) << this;
 
     _flushTimer.setInterval(kFlushIntervalMSecs);
     _flushTimer.setSingleShot(false);
@@ -57,15 +76,10 @@ QGCLogging::QGCLogging(QObject *parent)
     (void) connect(this, &QGCLogging::emitLog, this, &QGCLogging::_threadsafeLog, conntype);
 }
 
-QGCLogging::~QGCLogging()
-{
-    qCDebug(QGCLoggingLog) << this;
-}
-
 void QGCLogging::installHandler()
 {
     // Define the format for qDebug/qWarning/etc output
-    qSetMessagePattern(QStringLiteral("%{time process}%{if-warning} Warning:%{endif}%{if-critical} Critical:%{endif} %{message} - %{category} - (%{function}:%{line})"));
+    qSetMessagePattern(QStringLiteral("%{time process} - %{type}: %{message} (%{category}:%{function}:%{line})"));
 
     // Install our custom handler
     defaultHandler = qInstallMessageHandler(msgHandler);
@@ -79,20 +93,25 @@ void QGCLogging::log(const QString &message)
     }
 }
 
+void QGCLogging::logToConsole(const QString &message)
+{
+    qDebug().noquote() << message;
+}
+
 void QGCLogging::_threadsafeLog(const QString &message)
 {
-    // Notify view of new row
+    // QStringListModel::insertRows 가 이미 begin/endInsertRows 를 호출한다.
+    // 여기서 한 번 더 감싸면 뷰가 빈 행을 그리다 display 가 undefined 가 된다.
     const int line = rowCount();
-    (void) QStringListModel::insertRows(line, 1);
-    (void) setData(index(line, 0), message, Qt::DisplayRole);
+    if (QStringListModel::insertRows(line, 1)) {
+        (void) setData(index(line, 0), message, Qt::DisplayRole);
+    }
 
     // Trim old entries to cap memory usage
     static constexpr const int kMaxLogRows = kMaxLogFileSize / 100;
     if (rowCount() > kMaxLogRows) {
         const int removeCount = rowCount() - kMaxLogRows;
-        beginRemoveRows(QModelIndex(), 0, removeCount - 1);
         (void) removeRows(0, removeCount);
-        endRemoveRows();
     }
 
     // Queue for disk flush

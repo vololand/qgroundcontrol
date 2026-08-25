@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -8,7 +17,11 @@ import QtPositioning
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 import QGroundControl.FlightMap
+import QGroundControl.QGCMapEngineManager
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 
 FlightMap {
@@ -25,7 +38,6 @@ FlightMap {
     property var    _settings:          _settingsManager ? _settingsManager.offlineMapsSettings : null
     property var    _fmSettings:        _settingsManager ? _settingsManager.flightMapSettings : null
     property var    _appSettings:       _settingsManager.appSettings
-    property Fact   _tiandituFact:      _settingsManager ? _settingsManager.appSettings.tiandituToken : null
     property Fact   _mapboxFact:        _settingsManager ? _settingsManager.appSettings.mapboxToken : null
     property Fact   _mapboxAccountFact: _settingsManager ? _settingsManager.appSettings.mapboxAccount : null
     property Fact   _mapboxStyleFact:   _settingsManager ? _settingsManager.appSettings.mapboxStyle : null
@@ -71,7 +83,7 @@ FlightMap {
 
     Connections {
         target:                 QGroundControl.mapEngineManager
-        onErrorMessageChanged:  errorDialogFactory.open()
+        onErrorMessageChanged:  errorDialogComponent.createObject(mainWindow).open()
     }
 
     function handleChanges() {
@@ -122,7 +134,6 @@ FlightMap {
             mapBoundary.visible = true
             // Some times, for whatever reason, the bounding box is correct (around ETH for instance), but the rectangle is drawn across the planet.
             // When that happens, the "_map.fitViewportToMapItems()" below makes the map to zoom to the entire earth.
-            //console.log("Map boundary: " + mapBoundary.topLeft + " " + mapBoundary.bottomRight)
             _map.fitViewportToVisibleMapItems()
         }
         infoViewComponent.createObject(_map)
@@ -182,6 +193,7 @@ FlightMap {
         anchors.left:           parent.left
         anchors.bottom:         parent.bottom
         mapControl:             _map
+        buttonsOnLeft:          true
     }
 
     //-----------------------------------------------------------------
@@ -320,7 +332,7 @@ FlightMap {
                     QGCButton {
                         text:       qsTr("Delete")
                         width:      ScreenTools.defaultFontPixelWidth * (infoView._extraButton ? 6 : 10)
-                        onClicked:  deleteConfirmationDialogFactory.open()
+                        onClicked:  deleteConfirmationDialogComponent.createObject(mainWindow).open()
                         enabled:    tileSet ? (tileSet.savedTileSize > 0) : false
                     }
                     QGCButton {
@@ -386,6 +398,7 @@ FlightMap {
                         anchors.left:           parent.left
                         anchors.bottom:         parent.bottom
                         mapControl:             parent
+                        zoomButtonsVisible:     false
                     }
 
                     Rectangle {
@@ -424,6 +437,7 @@ FlightMap {
                         anchors.left:           parent.left
                         anchors.bottom:         parent.bottom
                         mapControl:             parent
+                        zoomButtonsVisible:     false
                     }
 
                     Rectangle {
@@ -524,11 +538,8 @@ FlightMap {
                                 }
                                 Component.onCompleted: {
                                     var index = mapCombo.find(mapType)
-                                    if (index === -1) {
-                                        console.warn("Active map name not in combo", mapType)
-                                    } else {
+                                    if (index !== -1)
                                         mapCombo.currentIndex = index
-                                    }
                                 }
                             }
                             QGCCheckBox {
@@ -707,7 +718,7 @@ FlightMap {
                         }
                     }
                 }
-            }
+            } 
         }
     }
 
@@ -723,12 +734,6 @@ FlightMap {
         visible:            _addNewSetViewObject
     }
 
-    QGCPopupDialogFactory {
-        id: errorDialogFactory
-
-        dialogComponent: errorDialogComponent
-    }
-
     Component {
         id: errorDialogComponent
 
@@ -737,12 +742,6 @@ FlightMap {
             text:       _mapEngineManager.errorMessage
             buttons:    Dialog.Close
         }
-    }
-
-    QGCPopupDialogFactory {
-        id: deleteConfirmationDialogFactory
-
-        dialogComponent: deleteConfirmationDialogComponent
     }
 
     Component {
@@ -762,3 +761,4 @@ FlightMap {
         }
     }
 }
+

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include "MapProvider.h"
@@ -41,7 +50,7 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox Light"),
             QStringLiteral("light-v9"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::CustomMap) {}
 };
 
@@ -52,7 +61,7 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox Dark"),
             QStringLiteral("dark-v9"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::CustomMap) {}
 };
 
@@ -85,7 +94,7 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox Bright"),
             QStringLiteral("bright-v9"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::CustomMap) {}
 };
 
@@ -96,7 +105,7 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox StreetsBasic"),
             QStringLiteral("basic-v9"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::StreetMap) {}
 };
 
@@ -107,7 +116,7 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox Outdoors"),
             QStringLiteral("outdoors-v10"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::CustomMap) {}
 };
 
@@ -118,6 +127,6 @@ public:
         : MapboxMapProvider(
             QStringLiteral("Mapbox Custom"),
             QStringLiteral("mapbox.custom"),
-            QGC_AVERAGE_TILE_SIZE,
+            AVERAGE_TILE_SIZE,
             QGeoMapType::CustomMap) {}
 };

@@ -1,4 +1,13 @@
-﻿#pragma once
+﻿/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+#pragma once
 
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
@@ -15,20 +24,21 @@ class QGCCompass;
 class QGCPositionManager : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+    // QML_ELEMENT
+    // QML_UNCREATABLE("")
 
     Q_PROPERTY(QGeoCoordinate gcsPosition                   READ gcsPosition                    NOTIFY gcsPositionChanged)
     Q_PROPERTY(qreal          gcsHeading                    READ gcsHeading                     NOTIFY gcsHeadingChanged)
     Q_PROPERTY(qreal          gcsPositionHorizontalAccuracy READ gcsPositionHorizontalAccuracy  NOTIFY gcsPositionHorizontalAccuracyChanged)
 
 public:
-    explicit QGCPositionManager(QObject *parent = nullptr);
+    QGCPositionManager(QObject *parent = nullptr);
     ~QGCPositionManager();
 
     /// Gets the singleton instance of AudioOutput.
     ///     @return The singleton instance.
     static QGCPositionManager *instance();
+    static void registerQmlTypes();
 
     void init();
     QGeoCoordinate gcsPosition() const { return _gcsPosition; }

@@ -1,8 +1,3 @@
-# ============================================================================
-# MAVLink Module
-# MAVLink protocol implementation and communication handling
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         ImageProtocolManager.cc
@@ -24,31 +19,37 @@ target_sources(${CMAKE_PROJECT_NAME}
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# ============================================================================
-# MAVLink Protocol Library Integration
-# ============================================================================
+#===========================================================================#
 
-message(STATUS "QGC: Building MAVLink")
+message(STATUS "Building MAVLink")
+
+# TODO:
+# CPMAddPackage(
+#     NAME mavlink
+#     GITHUB_REPOSITORY ${QGC_MAVLINK_GIT_REPO}
+#     GIT_TAG ${QGC_MAVLINK_GIT_TAG}
+#     OPTIONS
+#         "MAVLINK_DIALECT all"
+#         "MAVLINK_VERSION 2.0"
+# )
 
 CPMAddPackage(
     NAME mavlink
     GIT_REPOSITORY ${QGC_MAVLINK_GIT_REPO}
     GIT_TAG ${QGC_MAVLINK_GIT_TAG}
-    OPTIONS
-        "MAVLINK_DIALECT ${QGC_MAVLINK_DIALECT}"
-        "MAVLINK_VERSION ${QGC_MAVLINK_VERSION}"
 )
 
-if(mavlink_ADDED)
-    add_dependencies(${CMAKE_PROJECT_NAME} mavlink)
-    target_include_directories(${CMAKE_PROJECT_NAME}
-        PRIVATE
-            ${mavlink_BINARY_DIR}/include/mavlink
-            ${mavlink_BINARY_DIR}/include/mavlink/${QGC_MAVLINK_DIALECT}
-    )
-endif()
+# For QGC all dialects means common and development. Though use of development mavlink code should be restricted to debug builds only.
+target_include_directories(${CMAKE_PROJECT_NAME}
+    PRIVATE
+        ${mavlink_SOURCE_DIR}
+        ${mavlink_SOURCE_DIR}/all
+        ${mavlink_SOURCE_DIR}/common
+        ${mavlink_SOURCE_DIR}/development
+)
 
-# ----------------------------------------------------------------------------
-# LibEvents - MAVLink event handling
-# ----------------------------------------------------------------------------
+# if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+#   target_compile_options(comm PRIVATE -Wno-address-of-packed-member)
+# endif()
+
 add_subdirectory(LibEvents)

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include "FirmwarePlugin.h"
@@ -66,7 +75,8 @@ public:
     bool                supportsNegativeThrust          (Vehicle* vehicle) const override;
     QString             getHobbsMeter                   (Vehicle* vehicle) const override;
     bool                hasGripper                      (const Vehicle* vehicle) const override;
-    QVariant            expandedToolbarIndicatorSource  (const Vehicle* vehicle, const QString& indicatorName) const override;
+    QVariant            mainStatusIndicatorContentItem  (const Vehicle* vehicle) const override;
+    const QVariantList& toolIndicators                  (const Vehicle* vehicle) override;
 
     void                updateAvailableFlightModes      (FlightModeList &modeList) override;
 

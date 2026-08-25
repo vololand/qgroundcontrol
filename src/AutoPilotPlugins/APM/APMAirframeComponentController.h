@@ -1,8 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
-#include <QtQmlIntegration/QtQmlIntegration>
 
 #include "FactPanelController.h"
 
@@ -16,7 +24,6 @@ Q_DECLARE_LOGGING_CATEGORY(APMAirframeComponentControllerLog)
 class APMAirframeComponentController : public FactPanelController
 {
     Q_OBJECT
-    QML_ELEMENT
     Q_MOC_INCLUDE("QmlObjectListModel.h")
     Q_PROPERTY(QmlObjectListModel *frameClassModel MEMBER _frameClassModel CONSTANT)
 
@@ -28,8 +35,8 @@ public:
     Q_INVOKABLE void loadParameters(const QString &paramFile);
 
 private slots:
-    void _githubJsonDownloadComplete(bool success, const QString &localFile, const QString &errorMsg);
-    void _paramFileDownloadComplete(bool success, const QString &localFile, const QString &errorMsg);
+    void _githubJsonDownloadComplete(const QString &remoteFile, const QString &localFile, const QString &errorMsg);
+    void _paramFileDownloadComplete(const QString &remoteFile, const QString &localFile, const QString &errorMsg);
 
 private:
     void _fillFrameClasses();

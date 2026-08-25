@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QObject>
@@ -12,7 +21,7 @@ public:
     ~QGCImageProvider();
 
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) final;
-    void setImage(const QImage &image, uint8_t vehicleId = 0) { _images[vehicleId] = image.flipped(Qt::Vertical); }
+    void setImage(const QImage &image, uint8_t vehicleId = 0) { _images[vehicleId] = image.mirrored(); }
 
 private:
     QMap<uint8_t, QImage> _images;

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "GPSProvider.h"
 #include "QGCLoggingCategory.h"
 #include "RTCMMavlink.h"
@@ -15,8 +24,8 @@
 #include <QtSerialPort/QSerialPort>
 #endif
 
-QGC_LOGGING_CATEGORY(GPSProviderLog, "GPS.GPSProvider")
-QGC_LOGGING_CATEGORY(GPSDriversLog, "GPS.Drivers")
+QGC_LOGGING_CATEGORY(GPSProviderLog, "qgc.gps.gpsprovider")
+QGC_LOGGING_CATEGORY(GPSDriversLog, "qgc.gps.drivers")
 
 GPSProvider::GPSProvider(const QString &device, GPSType type, const rtk_data_s &rtkData, const std::atomic_bool &requestStop, QObject *parent)
     : QThread(parent)
@@ -211,7 +220,18 @@ GPSBaseStationSupport *GPSProvider::_connectGPS()
         baudrate = 0;
         break;
     case GPSType::u_blox:
-        gpsDriver = new GPSDriverUBX(GPSDriverUBX::Interface::UART, &_callbackEntry, this, &_sensorGps, &_satelliteInfo);
+        gpsDriver = new GPSDriverUBX(GPSDriverUBX::Interface::UART, &_callbackEntry, this, &_sensorGps, &_satelliteInfo,
+                                     GPSDriverUBX::Settings(0b111,                                      // dynamic_model
+                                                            10,                                         // dgnss_timeout
+                                                            0,                                          // min_cno
+                                                            10,                                         // min_elev
+                                                            0,                                          // output_rate (0=auto)
+                                                            kGPSHeadingOffset,                          // heading_offset
+                                                            static_cast<int32_t>(UBX_BAUDRATE_M8_AND_NEWER), // uart2_baudrate
+                                                            true,                                       // ppk_output
+                                                            false,                                      // jam_det_sensitivity_hi
+                                                            GPSDriverUBX::UBXMode::GroundControlStation // mode
+                                                            ));
         baudrate = 0;
         break;
     case GPSType::femto:
@@ -224,15 +244,10 @@ GPSBaseStationSupport *GPSProvider::_connectGPS()
         return nullptr;
     }
 
-    switch(_rtkData.useFixedBaseLocation){
-        case BaseModeDefinition::Mode::BaseFixed:
-            gpsDriver->setBasePosition(_rtkData.fixedBaseLatitude, _rtkData.fixedBaseLongitude, _rtkData.fixedBaseAltitudeMeters, _rtkData.fixedBaseAccuracyMeters * 1000.0f);
-            break;
+    gpsDriver->setSurveyInSpecs(_rtkData.surveyInAccMeters * 10000.f, _rtkData.surveyInDurationSecs);
 
-        case BaseModeDefinition::Mode::BaseSurveyIn:
-        default:
-            gpsDriver->setSurveyInSpecs(_rtkData.surveyInAccMeters * 10000.f, _rtkData.surveyInDurationSecs);
-            break;
+    if (_rtkData.useFixedBaseLoction) {
+        gpsDriver->setBasePosition(_rtkData.fixedBaseLatitude, _rtkData.fixedBaseLongitude, _rtkData.fixedBaseAltitudeMeters, _rtkData.fixedBaseAccuracyMeters * 1000.0f);
     }
 
     _gpsConfig.output_mode = GPSHelper::OutputMode::RTCM;

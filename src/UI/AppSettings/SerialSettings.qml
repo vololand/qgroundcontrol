@@ -1,9 +1,20 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 
 ColumnLayout {
     spacing: _rowSpacing
@@ -77,11 +88,8 @@ ColumnLayout {
                     baud = subEditConfig.baud.toString()
                 }
                 var index = baudCombo.find(baud)
-                if (index === -1) {
-                    console.warn(qsTr("Baud rate name not in combo box"), baud)
-                } else {
+                if (index !== -1)
                     baudCombo.currentIndex = index
-                }
             }
         }
     }
@@ -103,13 +111,6 @@ ColumnLayout {
             text:               qsTr("Enable Flow Control")
             checked:            subEditConfig.flowControl !== 0
             onCheckedChanged:   subEditConfig.flowControl = checked ? 1 : 0
-        }
-
-        QGCCheckBox {
-            Layout.columnSpan:  2
-            text:               qsTr("Force DTR Low")
-            checked:            subEditConfig ? subEditConfig.dtrForceLow : false
-            onCheckedChanged:   { if (subEditConfig) subEditConfig.dtrForceLow = checked }
         }
 
         QGCLabel { text: qsTr("Parity") }
@@ -144,7 +145,6 @@ ColumnLayout {
                     currentIndex = 2
                     break
                 default:
-                    console.warn("Unknown parity", subEditConfig.parity)
                     break
                 }
             }

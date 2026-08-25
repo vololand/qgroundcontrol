@@ -1,16 +1,34 @@
-#include "FactSystemTestBase.h"
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
+
+/// @file
+///     @author Don Gagne <don@thegagnes.com>
+
+#include "FactSystemTestBase.h"
+#include "MultiVehicleManager.h"
+#include "Vehicle.h"
+#include "ParameterManager.h"
 #include "AutoPilotPlugin.h"
 #include "MAVLinkProtocol.h"
-#include "MultiVehicleManager.h"
-#include "ParameterManager.h"
-#include "Vehicle.h"
+
+#include <QtTest/QTest>
 
 /// FactSystem Unit Test
+FactSystemTestBase::FactSystemTestBase(void)
+{
+
+}
 
 void FactSystemTestBase::_init(MAV_AUTOPILOT autopilot)
 {
-    // UnitTest::init() is called by the derived test class before this
+    UnitTest::init();
     MultiVehicleManager::instance()->init();
 
     _connectMockLink(autopilot);
@@ -19,14 +37,13 @@ void FactSystemTestBase::_init(MAV_AUTOPILOT autopilot)
     Q_ASSERT(_plugin);
 }
 
-void FactSystemTestBase::_cleanup()
+void FactSystemTestBase::_cleanup(void)
 {
-    _disconnectMockLink();
     UnitTest::cleanup();
 }
 
 /// Basic test of parameter values in Fact System
-void FactSystemTestBase::_parameter_default_component_id_test()
+void FactSystemTestBase::_parameter_default_component_id_test(void)
 {
     QVERIFY(_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "RC_MAP_THROTTLE"));
     Fact* fact = _vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "RC_MAP_THROTTLE");
@@ -37,7 +54,7 @@ void FactSystemTestBase::_parameter_default_component_id_test()
     QCOMPARE(factValue.toInt(), 3);
 }
 
-void FactSystemTestBase::_parameter_specific_component_id_test()
+void FactSystemTestBase::_parameter_specific_component_id_test(void)
 {
     QVERIFY(_vehicle->parameterManager()->parameterExists(MAV_COMP_ID_AUTOPILOT1, "RC_MAP_THROTTLE"));
     Fact* fact = _vehicle->parameterManager()->getParameter(MAV_COMP_ID_AUTOPILOT1, "RC_MAP_THROTTLE");
@@ -48,7 +65,7 @@ void FactSystemTestBase::_parameter_specific_component_id_test()
 }
 
 /// Test that QML can reference a Fact
-void FactSystemTestBase::_qml_test()
+void FactSystemTestBase::_qml_test(void)
 {
     //-- TODO
 #if 0
@@ -70,7 +87,7 @@ void FactSystemTestBase::_qml_test()
 }
 
 /// Test QML getting an updated Fact value
-void FactSystemTestBase::_qmlUpdate_test()
+void FactSystemTestBase::_qmlUpdate_test(void)
 {
     //-- TODO
 #if 0
@@ -97,3 +114,4 @@ void FactSystemTestBase::_qmlUpdate_test()
     delete widget;
 #endif
 }
+

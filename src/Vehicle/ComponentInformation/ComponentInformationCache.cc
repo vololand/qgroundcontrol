@@ -1,12 +1,20 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "ComponentInformationCache.h"
-#include "QGCFileHelper.h"
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QFile>
 #include <QtCore/QDirIterator>
 #include <QtCore/QStandardPaths>
 
-QGC_LOGGING_CATEGORY(ComponentInformationCacheLog, "ComponentInformation.ComponentInformationCache")
+QGC_LOGGING_CATEGORY(ComponentInformationCacheLog, "ComponentInformationCacheLog")
 
 ComponentInformationCache::ComponentInformationCache(const QDir& path, int maxNumFiles)
     : _path(path), _maxNumFiles(maxNumFiles)
@@ -107,8 +115,11 @@ QString ComponentInformationCache::insert(const QString &fileTag, const QString 
 
 void ComponentInformationCache::initializeDirectory()
 {
-    if (!QGCFileHelper::ensureDirectoryExists(_path.path())) {
-        qCWarning(ComponentInformationCacheLog) << "Failed to create dir" << _path.path();
+    if (!_path.exists()) {
+        QDir d;
+        if (!d.mkpath(_path.path())) {
+            qCWarning(ComponentInformationCacheLog) << "Failed to create dir" << _path.path();
+        }
     }
 
     QDir::Filters filters = QDir::Files | QDir::NoDotAndDotDot;

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "ArduRoverFirmwarePlugin.h"
 #include "QGCApplication.h"
 #include "Vehicle.h"
@@ -47,6 +56,11 @@ ArduRoverFirmwarePlugin::ArduRoverFirmwarePlugin(QObject *parent)
     updateAvailableFlightModes(availableFlightModes);
 
     if (!_remapParamNameIntialized) {
+        FirmwarePlugin::remapParamNameMap_t& remapV3_5 = _remapParamName[3][5];
+
+        remapV3_5["BATT_ARM_VOLT"] =    QStringLiteral("ARMING_VOLT_MIN");
+        remapV3_5["BATT2_ARM_VOLT"] =   QStringLiteral("ARMING_VOLT2_MIN");
+
         _remapParamNameIntialized = true;
     }
 }
@@ -56,10 +70,10 @@ ArduRoverFirmwarePlugin::~ArduRoverFirmwarePlugin()
 
 }
 
-int ArduRoverFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int /*majorVersionNumber*/) const
+int ArduRoverFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int majorVersionNumber) const
 {
-    // Remapping not supported
-    return Vehicle::versionNotSetValue;
+    // Remapping supports up to 3.5
+    return ((majorVersionNumber == 3) ? 5 : Vehicle::versionNotSetValue);
 }
 
 void ArduRoverFirmwarePlugin::guidedModeChangeAltitude(Vehicle* /*vehicle*/, double /*altitudeChange*/, bool /*pauseVehicle*/)

@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
-import QGroundControl
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
 import QGroundControl.Controls
+import QGroundControl.FactSystem
 
 Rectangle {
     height: _itemHeight
@@ -65,12 +67,6 @@ Rectangle {
         onValueChanged: reset()
     }
 
-    QGCPopupDialogFactory {
-        id: editDialogFactory
-
-        dialogComponent: editDialogComponent
-    }
-
     Component {
         id: editDialogComponent
 
@@ -101,7 +97,7 @@ Rectangle {
                 onClicked: {
                     valueListView.focus = true
                     if (_currentIndex === index) {
-                        editDialogFactory.open({ title: qsTr("Value Details") })
+                        editDialogComponent.createObject(mainWindow, { title: qsTr("Value Details") }).open()
                     } else {
                         _currentIndex = index
                         valueListView.positionViewAtIndex(_currentIndex, ListView.Center)

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "QtMultimediaReceiver.h"
 #include "QGCLoggingCategory.h"
 
@@ -12,7 +21,7 @@
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickItemGrabResult>
 
-QGC_LOGGING_CATEGORY(QtMultimediaReceiverLog, "Video.QtMultimediaReceiver")
+QGC_LOGGING_CATEGORY(QtMultimediaReceiverLog, "qgc.videomanager.videoreceiver.qtmultimedia.qtmultimediareceiver")
 
 QtMultimediaReceiver::QtMultimediaReceiver(QObject *parent)
     : VideoReceiver(parent)
@@ -50,7 +59,7 @@ QtMultimediaReceiver::QtMultimediaReceiver(QObject *parent)
     (void) connect(_mediaPlayer, &QMediaPlayer::bufferProgressChanged, this, [](float filled) {
         qCDebug(QtMultimediaReceiverLog) << Q_FUNC_INFO << "Buffer Progress:" << filled;
     });
-    (void) connect(_mediaPlayer, &QMediaPlayer::errorOccurred, this, [](QMediaPlayer::Error error, const QString &errorString) {
+    (void) connect(_mediaPlayer, &QMediaPlayer::errorOccurred, this, [this](QMediaPlayer::Error error, const QString &errorString) {
         switch (error) {
         case QMediaPlayer::Error::NetworkError:
             break;
@@ -72,7 +81,7 @@ QtMultimediaReceiver::QtMultimediaReceiver(QObject *parent)
         }
         emit recordingChanged(_mediaRecorder->recorderState() == QMediaRecorder::RecorderState::RecordingState);
     });
-    (void) connect(_mediaRecorder, &QMediaRecorder::errorOccurred, this, [](QMediaRecorder::Error error, const QString &errorString) {
+    (void) connect(_mediaRecorder, &QMediaRecorder::errorOccurred, this, [this](QMediaRecorder::Error error, const QString &errorString) {
         switch (error) {
         case QMediaRecorder::Error::OutOfSpaceError:
             break;
@@ -115,7 +124,7 @@ void *QtMultimediaReceiver::createVideoSink(QQuickItem *widget, QObject *parent)
     return videoSink;
 }
 
-void QtMultimediaReceiver::releaseVideoSink(void * /*sink*/)
+void QtMultimediaReceiver::releaseVideoSink(void *sink)
 {
     /*if (!sink) {
         return;

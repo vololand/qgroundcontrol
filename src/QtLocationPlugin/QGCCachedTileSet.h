@@ -1,9 +1,26 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
+/**
+ * @file
+ *   @brief Map Tile Set
+ *
+ *   @author Gus Grubba <gus@auterion.com>
+ *
+ */
+
 #pragma once
 
 #include <QtCore/QDateTime>
 #include <QtCore/QHash>
 #include <QtCore/QLoggingCategory>
-#include <QtCore/QMutex>
 #include <QtCore/QObject>
 #include <QtCore/QQueue>
 #include <QtCore/QString>
@@ -11,7 +28,7 @@
 
 Q_DECLARE_LOGGING_CATEGORY(QGCCachedTileSetLog)
 
-struct QGCTile;
+class QGCTile;
 class QGCMapEngineManager;
 class QNetworkAccessManager;
 
@@ -171,7 +188,6 @@ private:
     QDateTime _creationDate;
 
     QHash<QString, QNetworkReply*> _replies;
-    QMutex _repliesMutex;
     QQueue<QGCTile*> _tilesToDownload;
     QGCMapEngineManager *_manager = nullptr;
     QNetworkAccessManager *_networkManager = nullptr;

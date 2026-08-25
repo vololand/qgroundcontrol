@@ -4,16 +4,8 @@
     "QGC.MetaData.Facts":
 [
 {
-    "name":                 "baseReceiverManufacturers",
-    "shortDesc":            "GPS manufacturers for settings",
-    "type":                 "uint8",
-    "enumStrings":          "All,Trimble,Septentrio,Femtomes,UBlox",
-    "enumValues":           "0,1,2,3,4",
-    "default":              1
-},
-{
     "name":                 "surveyInAccuracyLimit",
-    "shortDesc":            "Survey in accuracy",
+    "shortDesc":            "Survey in accuracy (U-blox only)",
     "longDesc":             "The minimum accuracy value that Survey-In must achieve before it can complete.",
     "type":                 "double",
     "default":              2.0,
@@ -39,12 +31,10 @@
 },
 {
     "name":                 "useFixedBasePosition",
-    "shortDesc":            "Use specified base mode",
-    "longDesc":             "Specify the mode for the RTK base 0: Survey-In (Fixed + Auto) 1: Specify position (Fixed + Manual)",
-    "type":                 "uint8",
-    "enumStrings":          "Survey-In, Fixed",
-    "enumValues":           "0,1",
-    "default":              0,
+    "shortDesc":     "Use specified base position",
+    "longDesc":      "Specify the values for the RTK base position without having to do a survey in.",
+    "type":                 "bool",
+    "default":         false,
     "qgcRebootRequired":    true
 },
 {

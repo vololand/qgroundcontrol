@@ -1,7 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "ImageProtocolManager.h"
 #include "QGCLoggingCategory.h"
 
-QGC_LOGGING_CATEGORY(ImageProtocolManagerLog, "MAVLink.ImageProtocolManager")
+QGC_LOGGING_CATEGORY(ImageProtocolManagerLog, "qgc.mavlink.imageprotocolmanager")
 
 ImageProtocolManager::ImageProtocolManager(QObject *parent)
     : QObject(parent)
@@ -34,7 +43,7 @@ bool ImageProtocolManager::requestImage(uint8_t system_id, uint8_t component_id,
 
 void ImageProtocolManager::cancelRequest(uint8_t system_id, uint8_t component_id, uint8_t chan, mavlink_message_t &message)
 {
-    constexpr mavlink_data_transmission_handshake_t data{};
+    constexpr mavlink_data_transmission_handshake_t data{0};
     (void) mavlink_msg_data_transmission_handshake_encode_chan(system_id, component_id, chan, &message, &data);
 }
 

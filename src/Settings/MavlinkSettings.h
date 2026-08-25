@@ -1,6 +1,13 @@
-#pragma once
+/***************_qgcTranslatorSourceCode***********************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-#include <QtQmlIntegration/QtQmlIntegration>
+#pragma once
 
 #include "SettingsGroup.h"
 
@@ -8,8 +15,7 @@
 class MavlinkSettings : public SettingsGroup
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("")
+
 public:
     MavlinkSettings(QObject* parent = nullptr);
 
@@ -24,6 +30,7 @@ public:
     DEFINE_SETTINGFACT(mavlink2SigningKey)
     DEFINE_SETTINGFACT(sendGCSHeartbeat)
     DEFINE_SETTINGFACT(gcsMavlinkSystemID)
+    DEFINE_SETTINGFACT(requireMatchingMavlinkVersions)
 
     // Although this is a global setting it only affects ArduPilot vehicle since PX4 automatically starts the stream from the vehicle side
     DEFINE_SETTINGFACT(apmStartMavlinkStreams)

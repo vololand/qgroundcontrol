@@ -1,9 +1,20 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Effects
 import QtLocation
 import QtPositioning
 
 import QGroundControl
+import QGroundControl.ScreenTools
+import QGroundControl.Vehicle
 import QGroundControl.Controls
 
 /// Marker for displaying a vehicle location on the map
@@ -45,10 +56,10 @@ MapQuickItem {
             blurMax: 32
             blurMultiplier: .1
         }
-
+            
         Repeater {
-            model: vehicle ? vehicle.gimbalController.gimbals : []
-
+            model: vehicle ? vehicle.gimbalController.gimbals : [] 
+            
             Item {
                 id:                           canvasItem
                 anchors.centerIn:             vehicleItem
@@ -71,7 +82,6 @@ MapQuickItem {
 
                     function paintHeading() {
                         var context = getContext("2d")
-                        // console.log("painting heading " + object.param1Raw + " " + opacity + " " + visible + " " + _index)
                         context.clearRect(0, 0, vehicleIcon.width, vehicleIcon.height);
 
                         var centerX = canvas.width / 2;
@@ -110,7 +120,14 @@ MapQuickItem {
 
         Image {
             id:                 vehicleIcon
-            source:             _adsbVehicle ? (alert ? "/qmlimages/AlertAircraft.svg" : "/qmlimages/AwarenessAircraft.svg") : vehicle.vehicleImageOpaque
+            source: {
+                if (_adsbVehicle) return alert ? "/qmlimages/AlertAircraft.svg" : "/qmlimages/AwarenessAircraft.svg"
+                if (!vehicle) return ""
+                var spd = vehicle.groundSpeed.value
+                if (spd >= 5.0)  return "/qmlimages/vehicleArrowOpaque_2.png"
+                if (spd > 0)     return "/qmlimages/vehicleArrowOpaque_1.png"
+                return vehicle.vehicleImageOpaque
+            }
             mipmap:             true
             width:              _root.size
             sourceSize.width:   _root.size

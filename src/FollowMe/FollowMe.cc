@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "FollowMe.h"
 #include "MultiVehicleManager.h"
 #include "FirmwarePlugin.h"
@@ -9,7 +18,7 @@
 
 #include <QtPositioning/QGeoPositionInfo>
 
-QGC_LOGGING_CATEGORY(FollowMeLog, "API.FollowMe")
+QGC_LOGGING_CATEGORY(FollowMeLog, "qgc.followme")
 
 Q_APPLICATION_STATIC(FollowMe, _followMeInstance);
 
@@ -20,7 +29,7 @@ FollowMe::FollowMe(QObject *parent)
     // qCDebug(FollowMeLog) << Q_FUNC_INFO << this;
 
     _gcsMotionReportTimer->setSingleShot(false);
-    // We set the update interval to a fixed amount of time.
+    // We set the update interval to a fixed amount of time. 
     // Even if the device can't update this quickly we'll pick up a new value on the next time around.
     // We can't trust the value for update interval which comes from the actual device.
     _gcsMotionReportTimer->setInterval(kMotionUpdateInterval);
@@ -111,7 +120,7 @@ void FollowMe::_sendGCSMotionReport()
         return;
     }
 
-    GCSMotionReport motionReport{};
+    GCSMotionReport motionReport{0};
     uint8_t estimationCapabilities = 0;
 
     // Get the current location coordinates

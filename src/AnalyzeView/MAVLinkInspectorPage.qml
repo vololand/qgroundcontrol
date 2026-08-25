@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -6,7 +15,10 @@ import QtQuick.Window
 import QtCharts
 
 import QGroundControl
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.Controllers
+import QGroundControl.ScreenTools
 
 AnalyzePage {
     id: root
@@ -33,22 +45,27 @@ AnalyzePage {
             if(!checkBox) {
                 continue
             }
-            const messageField = message.fields.get(i)
-            checkBox.enabled = isCheckboxEnabled(checkBox, messageField, chart)
+            const object = message.fields.get(i)
+            checkBox.enabled = isCheckboxEnabled(checkBox, object, chart)
         }
     }
 
-    function isCheckboxEnabled(checkBox, messageField, chart) {
+    function isCheckboxEnabled(checkBox, object, chart) {
         if(checkBox.checkState === Qt.Checked) {
             return true
         }
-        if(!messageField.selectable) {
+        if(!object.selectable) {
             return false
         }
-        if(messageField.series !== null) {
+        if(object.series !== null) {
             return false
         }
-        return chart.roomForNewDimension()
+        if(chart.chartController !== null) {
+            if (chart.chartController.chartFields.length >= chart.seriesColors.length) {
+                return false
+            }
+        }
+        return true
     }
 
     Component {
@@ -73,7 +90,7 @@ AnalyzePage {
 
                     Connections {
                         target: controller
-                        function onActiveSystemChanged() {
+                        onActiveSystemChanged: {
                             for (var systemIndex=0; systemIndex<controller.systems.count; systemIndex++) {
                                 if (controller.systems.get(systemIndex) == curSystem) {
                                     systemCombo.currentIndex = systemIndex
@@ -321,18 +338,14 @@ AnalyzePage {
                     }
                     Item { height: ScreenTools.defaultFontPixelHeight * 0.25; width: 1 }
                     MAVLinkChart {
-                        id:                     chart1
-                        height:                 ScreenTools.defaultFontPixelHeight * 20
-                        width:                  parent.width
-                        inspectorController:    controller
-                        chartIndex:             0
+                        id:         chart1
+                        height:     ScreenTools.defaultFontPixelHeight * 20
+                        width:      parent.width
                     }
                     MAVLinkChart {
-                        id:                     chart2
-                        height:                 ScreenTools.defaultFontPixelHeight * 20
-                        width:                  parent.width
-                        inspectorController:    controller
-                        chartIndex:             1
+                        id:         chart2
+                        height:     ScreenTools.defaultFontPixelHeight * 20
+                        width:      parent.width
                     }
                 }
             }

@@ -1,8 +1,3 @@
-# ============================================================================
-# Mission Manager Unit Tests
-# Tests for mission planning, waypoints, and flight plan management
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         CameraCalcTest.cc CameraCalcTest.h
@@ -32,44 +27,10 @@ target_sources(${CMAKE_PROJECT_NAME}
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# ----------------------------------------------------------------------------
-# Test Data Resources
-# ----------------------------------------------------------------------------
-qt_add_resources(${CMAKE_PROJECT_NAME} "MissionManagerTest_res"
-    PREFIX "/unittest"
-    FILES
-        MissionPlanner.waypoints
-        MissionPlanner.waypoints.txt
-        PolygonAreaTest.kml
-        PolygonBadCoordinatesNode.kml
-        PolygonBadXml.kml
-        PolygonGood.kml
-        PolygonMissingNode.kml
-        SectionTest.plan
-        UT-MavCmdInfoCommon.json
-        UT-MavCmdInfoFixedWing.json
-        UT-MavCmdInfoMultiRotor.json
-        UT-MavCmdInfoRover.json
-        UT-MavCmdInfoSub.json
-        UT-MavCmdInfoVTOL.json
-)
-
-qt_add_resources(${CMAKE_PROJECT_NAME} "MissionManagerTest_res1"
-    PREFIX "/qml"
-    FILES
-        MissionCommandTreeEditorTestWindow.qml
-)
-
-# TODO: Enable QML module for mission manager tests
-# qt_add_library(MissionManagerTestModule STATIC)
-#
-# qt_add_qml_module(MissionManagerTestModule
-#     URI QGroundControl.Test.MissionManager
+# qt_add_qml_module(${CMAKE_PROJECT_NAME}
+#     URI missionmanagertest
 #     VERSION 1.0
-#     RESOURCE_PREFIX /unittest
 #     QML_FILES
 #         MissionCommandTreeEditorTestWindow.qml
-#     NO_PLUGIN
+#     IMPORT_PATH ${QT_QML_OUTPUT_DIRECTORY}
 # )
-#
-# target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE MissionManagerTestModule)

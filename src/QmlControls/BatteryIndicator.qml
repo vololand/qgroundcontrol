@@ -1,9 +1,24 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.MultiVehicleManager
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.AutoPilotPlugin
+import MAVLink
 
 //-------------------------------------------------------------------------
 //-- Battery Indicator
@@ -13,8 +28,8 @@ Item {
     anchors.bottom: parent.bottom
     width:          batteryIndicatorRow.width
 
-    property bool       showIndicator:      _activeVehicle && _activeVehicle.batteries.count > 0
-    property bool       waitForParameters:  true    // UI won't show until parameters are ready
+    property bool       showIndicator:      true
+    property bool       waitForParameters:  false   // UI won't show until parameters are ready
     property Component  expandedPageComponent
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
@@ -23,169 +38,33 @@ Item {
     property bool   _showPercentage:    _indicatorDisplay.rawValue === 0
     property bool   _showVoltage:       _indicatorDisplay.rawValue === 1
     property bool   _showBoth:          _indicatorDisplay.rawValue === 2
-    property int    _lowestBatteryId:   -1      // -1: show all batteries, otherwise show only battery with this id
 
     // Properties to hold the thresholds
     property int threshold1: _batterySettings.threshold1.rawValue
-    property int threshold2: _batterySettings.threshold2.rawValue
+    property int threshold2: _batterySettings.threshold2.rawValue   
 
-    function _recalcLowestBatteryIdFromVoltage() {
-        if (_activeVehicle) {
-            // If there is only one battery then it is the lowest
-            if (_activeVehicle.batteries.count === 1) {
-                _lowestBatteryId = _activeVehicle.batteries.get(0).id.rawValue
-                return
-            }
-
-            // If we have valid voltage for all batteries we use that to determine lowest battery
-            let allHaveVoltage = true
-            for (var i = 0; i < _activeVehicle.batteries.count; i++) {
-                let battery = _activeVehicle.batteries.get(i)
-                if (isNaN(battery.voltage.rawValue)) {
-                    allHaveVoltage = false
-                    break
-                }
-            }
-            if (allHaveVoltage) {
-                let lowestBattery = _activeVehicle.batteries.get(0)
-                let lowestBatteryId = lowestBattery.id.rawValue
-                for (var i = 1; i < _activeVehicle.batteries.count; i++) {
-                    let battery = _activeVehicle.batteries.get(i)
-                    if (battery.voltage.rawValue < lowestBattery.voltage.rawValue) {
-                        lowestBattery = battery
-                        lowestBatteryId = battery.id.rawValue
-                    }
-                }
-                _lowestBatteryId = lowestBatteryId
-                return
-            }
-        }
-
-        // Couldn't determine lowest battery, show all
-        _lowestBatteryId = -1
-    }
-
-    function _recalcLowestBatteryIdFromPercentage() {
-        if (_activeVehicle) {
-            // If there is only one battery then it is the lowest
-            if (_activeVehicle.batteries.count === 1) {
-                _lowestBatteryId = _activeVehicle.batteries.get(0).id.rawValue
-                return
-            }
-
-            // If we have valid percentage for all batteries we use that to determine lowest battery
-            let allHavePercentage = true
-            for (var i = 0; i < _activeVehicle.batteries.count; i++) {
-                let battery = _activeVehicle.batteries.get(i)
-                if (isNaN(battery.percentRemaining.rawValue)) {
-                    allHavePercentage = false
-                    break
-                }
-            }
-            if (allHavePercentage) {
-                let lowestBattery = _activeVehicle.batteries.get(0)
-                let lowestBatteryId = lowestBattery.id.rawValue
-                for (var i = 1; i < _activeVehicle.batteries.count; i++) {
-                    let battery = _activeVehicle.batteries.get(i)
-                    if (battery.percentRemaining.rawValue < lowestBattery.percentRemaining.rawValue) {
-                        lowestBattery = battery
-                        lowestBatteryId = battery.id.rawValue
-                    }
-                }
-                _lowestBatteryId = lowestBatteryId
-                return
-            }
-        }
-
-        // Couldn't determine lowest battery, show all
-        _lowestBatteryId = -1
-    }
-
-    function _recalcLowestBatteryIdFromChargeState() {
-        if (_activeVehicle) {
-            // If there is only one battery then it is the lowest
-            if (_activeVehicle.batteries.count === 1) {
-                _lowestBatteryId = _activeVehicle.batteries.get(0).id.rawValue
-                return
-            }
-
-            // If we have valid chargeState for all batteries we use that to determine lowest battery
-            let allHaveChargeState = true
-            for (var i = 0; i < _activeVehicle.batteries.count; i++) {
-                let battery = _activeVehicle.batteries.get(i)
-                if (battery.chargeState.rawValue === MAVLink.MAV_BATTERY_CHARGE_STATE_UNDEFINED) {
-                    allHaveChargeState = false
-                    break
-                }
-            }
-            if (allHaveChargeState) {
-                let lowestBattery = _activeVehicle.batteries.get(0)
-                let lowestBatteryId = lowestBattery.id.rawValue
-                for (var i = 1; i < _activeVehicle.batteries.count; i++) {
-                    let battery = _activeVehicle.batteries.get(i)
-                    if (battery.chargeState.rawValue > lowestBattery.chargeState.rawValue) {
-                        lowestBattery = battery
-                        lowestBatteryId = battery.id.rawValue
-                    }
-                }
-                _lowestBatteryId = lowestBatteryId
-                return
-            }
-        }
-
-        // Couldn't determine lowest battery, show all
-        _lowestBatteryId = -1
-    }
-
-    function _recalcLowestBatteryId() {
-        if (!_activeVehicle || _activeVehicle.batteries.count === 0) {
-            _lowestBatteryId = -1
-            return
-        }
-        if (_batterySettings.valueDisplay.rawValue === 0) {
-            // User wants percentage display so use that if available
-            _recalcLowestBatteryIdFromPercentage()
-        } else if (_batterySettings.valueDisplay.rawValue === 1) {
-            // User wants voltage display so use that if available
-            _recalcLowestBatteryIdFromVoltage()
-        }
-        // If we still dont have a lowest battery id then try charge state
-        if (_lowestBatteryId === -1) {
-            _recalcLowestBatteryIdFromChargeState()
-        }
-    }
-
-    Component.onCompleted: _recalcLowestBatteryId()
-
-    Connections {
-        target: _activeVehicle ? _activeVehicle.batteries : null
-        function onCountChanged() {_recalcLowestBatteryId() }
-    }
-
-    QGCPalette { id: qgcPal }
-
-    RowLayout {
+    Row {
         id:             batteryIndicatorRow
         anchors.top:    parent.top
         anchors.bottom: parent.bottom
-        spacing:        ScreenTools.defaultFontPixelWidth / 2
 
         Repeater {
             model: _activeVehicle ? _activeVehicle.batteries : 0
 
             Loader {
-                Layout.fillHeight:  true
+                anchors.top:        parent.top
+                anchors.bottom:     parent.bottom
                 sourceComponent:    batteryVisual
-                visible:            control._lowestBatteryId === -1 || object.id.rawValue === control._lowestBatteryId || !control._batterySettings.consolidateMultipleBatteries.rawValue
 
                 property var battery: object
             }
         }
     }
-
     MouseArea {
         anchors.fill:   parent
-        onClicked:      mainWindow.showIndicatorDrawer(batteryPopup, control)
+        onClicked: {
+            mainWindow.showIndicatorDrawer(batteryPopup, control)
+        }
     }
 
     Component {
@@ -203,19 +82,19 @@ Item {
         id: batteryVisual
 
         Row {
-            Layout.fillHeight:  true
-            spacing:            ScreenTools.defaultFontPixelWidth / 4
+            anchors.top:    parent.top
+            anchors.bottom: parent.bottom
 
             function getBatteryColor() {
                 switch (battery.chargeState.rawValue) {
                     case MAVLink.MAV_BATTERY_CHARGE_STATE_OK:
                         if (!isNaN(battery.percentRemaining.rawValue)) {
                             if (battery.percentRemaining.rawValue > threshold1) {
-                                return qgcPal.colorGreen
+                                return qgcPal.colorGreen 
                             } else if (battery.percentRemaining.rawValue > threshold2) {
-                                return qgcPal.colorYellowGreen
+                                return qgcPal.colorYellowGreen 
                             } else {
-                                return qgcPal.colorYellow
+                                return qgcPal.colorYellow 
                             }
                         } else {
                             return qgcPal.text
@@ -230,7 +109,7 @@ Item {
                     default:
                         return qgcPal.text
                 }
-            }
+            }    
 
             function getBatterySvgSource() {
                 switch (battery.chargeState.rawValue) {
@@ -241,8 +120,8 @@ Item {
                             } else if (battery.percentRemaining.rawValue > threshold2) {
                                 return "/qmlimages/BatteryYellowGreen.svg"
                             } else {
-                                return "/qmlimages/BatteryYellow.svg"
-                            }
+                                return "/qmlimages/BatteryYellow.svg"    
+                            } 
                         }
                     case MAVLink.MAV_BATTERY_CHARGE_STATE_LOW:
                         return "/qmlimages/BatteryOrange.svg" // Low with orange svg
@@ -281,34 +160,6 @@ Item {
                 return qsTr("n/a")
             }
 
-            Timer {
-                id:         debounceRecalcTimer
-                interval:   50
-                running:    false
-                repeat:     false
-                onTriggered: {
-                    control._recalcLowestBatteryId()
-                }
-            }
-            Connections {
-                target: battery.percentRemaining
-                function onRawValueChanged() {
-                    debounceRecalcTimer.restart()
-                }
-            }
-            Connections {
-                target: battery.voltage
-                function onRawValueChanged() {
-                    debounceRecalcTimer.restart()
-                }
-            }
-            Connections {
-                target: battery.chargeState
-                function onRawValueChanged() {
-                    debounceRecalcTimer.restart()
-                }
-            }
-
             QGCColoredImage {
                 anchors.top:        parent.top
                 anchors.bottom:     parent.bottom
@@ -328,7 +179,7 @@ Item {
                 QGCLabel {
                     Layout.alignment:       Qt.AlignHCenter
                     verticalAlignment:      Text.AlignVCenter
-                    color:                  qgcPal.windowTransparentText
+                    color:                  qgcPal.text
                     text:                   getBatteryPercentageText()
                     font.pointSize:         _showBoth ? ScreenTools.defaultFontPointSize : ScreenTools.mediumFontPointSize
                     visible:                _showBoth || _showPercentage
@@ -337,7 +188,7 @@ Item {
                 QGCLabel {
                     Layout.alignment:       Qt.AlignHCenter
                     font.pointSize:         _showBoth ? ScreenTools.defaultFontPointSize : ScreenTools.mediumFontPointSize
-                    color:                  qgcPal.windowTransparentText
+                    color:                  qgcPal.text
                     text:                   getBatteryVoltageText()
                     visible:                _showBoth || _showVoltage
                 }
@@ -434,40 +285,34 @@ Item {
         ColumnLayout {
             spacing: ScreenTools.defaultFontPixelHeight / 2
 
-            property real batteryIconHeight: ScreenTools.defaultFontPixelWidth * 3
-
             FactPanelController { id: controller }
 
             SettingsGroupLayout {
                 heading:            qsTr("Battery Display")
                 Layout.fillWidth:   true
 
-                FactCheckBoxSlider {
-                    Layout.fillWidth:   true
-                    fact:               _batterySettings.consolidateMultipleBatteries
-                    text:               qsTr("Only show battery with lowest charge")
-                    visible:            fact.visible
-                }
-
                 LabelledFactComboBox {
-                    label:      qsTr("Value")
-                    fact:       _batterySettings.valueDisplay
-                    visible:    fact.visible
+                    id:             editModeCheckBox
+                    label:          qsTr("Value")
+                    fact:           _fact
+                    visible:        _fact,visible
+
+                    property Fact _fact: QGroundControl.settingsManager.batteryIndicatorSettings.valueDisplay
                 }
 
                 ColumnLayout {
                     QGCLabel { text: qsTr("Coloring") }
 
                     RowLayout {
-                        spacing: ScreenTools.defaultFontPixelWidth
+                        spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Reduced spacing between elements
 
                         // Battery 100%
                         RowLayout {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Tighter spacing for icon and label
                             QGCColoredImage {
                                 source: "/qmlimages/BatteryGreen.svg"
-                                width: height
-                                height: batteryIconHeight
+                                width: ScreenTools.defaultFontPixelWidth * 6
+                                height: width
                                 fillMode: Image.PreserveAspectFit
                                 color: qgcPal.colorGreen
                             }
@@ -479,8 +324,8 @@ Item {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Tighter spacing for icon and field
                             QGCColoredImage {
                                 source: "/qmlimages/BatteryYellowGreen.svg"
-                                width: height
-                                height: batteryIconHeight
+                                width: ScreenTools.defaultFontPixelWidth * 6
+                                height: width
                                 fillMode: Image.PreserveAspectFit
                                 color: qgcPal.colorYellowGreen
                             }
@@ -502,8 +347,8 @@ Item {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Tighter spacing for icon and field
                             QGCColoredImage {
                                 source: "/qmlimages/BatteryYellow.svg"
-                                width: height
-                                height: batteryIconHeight
+                                width: ScreenTools.defaultFontPixelWidth * 6
+                                height: width
                                 fillMode: Image.PreserveAspectFit
                                 color: qgcPal.colorYellow
                             }
@@ -514,7 +359,7 @@ Item {
                                 enabled: fact.visible
                                 onEditingFinished: {
                                     // Validate and set the new threshold value
-                                    _batterySettings.setThreshold2(parseInt(text));
+                                    _batterySettings.setThreshold2(parseInt(text));                                
                                 }
                             }
                         }
@@ -524,8 +369,8 @@ Item {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Tighter spacing for icon and label
                             QGCColoredImage {
                                 source: "/qmlimages/BatteryOrange.svg"
-                                width: height
-                                height: batteryIconHeight
+                                width: ScreenTools.defaultFontPixelWidth * 6
+                                height: width
                                 fillMode: Image.PreserveAspectFit
                                 color: qgcPal.colorOrange
                             }
@@ -537,8 +382,8 @@ Item {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.05  // Tighter spacing for icon and label
                             QGCColoredImage {
                                 source: "/qmlimages/BatteryCritical.svg"
-                                width: height
-                                height: batteryIconHeight
+                                width: ScreenTools.defaultFontPixelWidth * 6
+                                height: width
                                 fillMode: Image.PreserveAspectFit
                                 color: qgcPal.colorRed
                             }
@@ -549,8 +394,8 @@ Item {
             }
 
             Loader {
-                Layout.fillWidth:   true
-                source:             _activeVehicle.expandedToolbarIndicatorSource("Battery")
+                Layout.fillWidth: true
+                sourceComponent: expandedPageComponent
             }
 
             SettingsGroupLayout {
@@ -565,7 +410,7 @@ Item {
                         mainWindow.showKnownVehicleComponentConfigPage(AutoPilotPlugin.KnownPowerVehicleComponent)
                         mainWindow.closeIndicatorDrawer()
                     }
-                }
+                }                
             }
         }
     }

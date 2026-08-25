@@ -1,7 +1,17 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 #include "ComponentInformationTranslation.h"
 #include "QGCCachedFileDownload.h"
-#include "JsonParsing.h"
-#include "QGCCompression.h"
+#include "JsonHelper.h"
+#include "QGCLZMA.h"
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QStandardPaths>
@@ -10,7 +20,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QXmlStreamReader>
 
-QGC_LOGGING_CATEGORY(ComponentInformationTranslationLog, "ComponentInformation.ComponentInformationTranslation")
+QGC_LOGGING_CATEGORY(ComponentInformationTranslationLog, "ComponentInformationTranslationLog")
 
 ComponentInformationTranslation::ComponentInformationTranslation(QObject* parent,
                                                                  QGCCachedFileDownload* cachedFileDownload)
@@ -30,10 +40,10 @@ bool ComponentInformationTranslation::downloadAndTranslate(const QString& summar
     }
 
     // Download file
-    connect(_cachedFileDownload, &QGCCachedFileDownload::finished, this, &ComponentInformationTranslation::onDownloadCompleted);
+    connect(_cachedFileDownload, &QGCCachedFileDownload::downloadComplete, this, &ComponentInformationTranslation::onDownloadCompleted);
     if (!_cachedFileDownload->download(url, maxCacheAgeSec)) {
         qCWarning(ComponentInformationTranslationLog) << "Metadata translation download failed";
-        disconnect(_cachedFileDownload, &QGCCachedFileDownload::finished, this, &ComponentInformationTranslation::onDownloadCompleted);
+        disconnect(_cachedFileDownload, &QGCCachedFileDownload::downloadComplete, this, &ComponentInformationTranslation::onDownloadCompleted);
         return false;
     }
     return true;
@@ -44,7 +54,7 @@ QString ComponentInformationTranslation::getUrlFromSummaryJson(const QString &su
     QString         errorString;
     QJsonDocument   jsonDoc;
 
-    if (!JsonParsing::isJsonFile(summaryJsonFile, jsonDoc, errorString)) {
+    if (!JsonHelper::isJsonFile(summaryJsonFile, jsonDoc, errorString)) {
         qCWarning(ComponentInformationTranslationLog) << "Metadata translation summary json file open failed:" << errorString;
         return "";
     }
@@ -63,20 +73,22 @@ QString ComponentInformationTranslation::getUrlFromSummaryJson(const QString &su
     return url;
 }
 
-void ComponentInformationTranslation::onDownloadCompleted(bool success, const QString &localFile, QString errorMsg, [[maybe_unused]] bool fromCache)
+void ComponentInformationTranslation::onDownloadCompleted(QString remoteFile, QString localFile, QString errorMsg)
 {
-    disconnect(_cachedFileDownload, &QGCCachedFileDownload::finished, this, &ComponentInformationTranslation::onDownloadCompleted);
+    disconnect(_cachedFileDownload, &QGCCachedFileDownload::downloadComplete, this, &ComponentInformationTranslation::onDownloadCompleted);
 
     QString tsFileName = localFile;
     bool deleteFile = false;
-    if (success) {
-        const QString tempPath = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).absoluteFilePath("qgc_translation_file_decompressed.ts");
-        tsFileName = QGCCompression::decompressIfNeeded(localFile, tempPath, false);
-        if (tsFileName.isEmpty()) {
-            const QString remoteFile = _cachedFileDownload->url().toString();
-            errorMsg = "Decompression of translation file failed: " + remoteFile;
-        } else if (tsFileName != localFile) {
-            deleteFile = true;  // Mark for cleanup since we decompressed
+    if (errorMsg.isEmpty()) {
+
+        // Decompress if needed
+        if (localFile.endsWith(".lzma", Qt::CaseInsensitive) || localFile.endsWith(".xz", Qt::CaseInsensitive)) {
+            tsFileName = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).absoluteFilePath("qgc_translation_file_decompressed.ts");
+            if (QGCLZMA::inflateLZMAFile(localFile, tsFileName)) {
+                deleteFile = true;
+            } else {
+                errorMsg = "Inflate of compressed json failed, " + remoteFile;
+            }
         }
     }
 
@@ -104,7 +116,7 @@ QString ComponentInformationTranslation::translateJsonUsingTS(const QString &toT
     QString         errorString;
     QJsonDocument   jsonDoc;
 
-    if (!JsonParsing::isJsonFile(toTranslateJsonFile, jsonDoc, errorString)) {
+    if (!JsonHelper::isJsonFile(toTranslateJsonFile, jsonDoc, errorString)) {
         qCWarning(ComponentInformationTranslationLog) << "Metadata json file to translate open failed:" << errorString;
         return "";
     }

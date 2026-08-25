@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "TransectStyleComplexItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
@@ -14,7 +23,7 @@
 
 #include <QtCore/QJsonArray>
 
-QGC_LOGGING_CATEGORY(TransectStyleComplexItemLog, "Plan.TransectStyleComplexItem")
+QGC_LOGGING_CATEGORY(TransectStyleComplexItemLog, "TransectStyleComplexItemLog")
 
 TransectStyleComplexItem::TransectStyleComplexItem(PlanMasterController* masterController, bool flyView, QString settingsGroup)
     : ComplexMissionItem                (masterController, flyView)
@@ -896,9 +905,9 @@ void TransectStyleComplexItem::_buildFlightPathCoordInfoFromPathHeightInfoForCal
             double azimuth  = fromCoordInfo.coord.azimuthTo(toCoordInfo.coord);
             double distance = fromCoordInfo.coord.distanceTo(toCoordInfo.coord);
 
-            for (int interstitialIndex=1; interstitialIndex<cHeights - 1; interstitialIndex++) {
-                double interstitialTerrainHeight = pathHeightInfo.heights[interstitialIndex];
-                double percentTowardsTo = (1.0 / (cHeights - 1)) * interstitialIndex;
+            for (int pathHeightIndex=1; pathHeightIndex<cHeights - 1; pathHeightIndex++) {
+                double interstitialTerrainHeight = pathHeightInfo.heights[pathHeightIndex];
+                double percentTowardsTo = (1.0 / (cHeights - 1)) * pathHeightIndex;
 
                 CoordInfo_t interstitialCoordInfo;
                 interstitialCoordInfo.coordType = CoordTypeInteriorTerrainAdded;
@@ -924,9 +933,9 @@ void TransectStyleComplexItem::_buildFlightPathCoordInfoFromPathHeightInfoForCal
             double azimuth  = fromCoordInfo.coord.azimuthTo(toCoordInfo.coord);
             double distance = fromCoordInfo.coord.distanceTo(toCoordInfo.coord);
 
-            for (int interstitialIndex=1; interstitialIndex<cHeights - 1; interstitialIndex++) {
-                double interstitialTerrainHeight = pathHeightInfo.heights[interstitialIndex];
-                double percentTowardsTo = (1.0 / (cHeights - 1)) * interstitialIndex;
+            for (int pathHeightIndex=1; pathHeightIndex<cHeights - 1; pathHeightIndex++) {
+                double interstitialTerrainHeight = pathHeightInfo.heights[pathHeightIndex];
+                double percentTowardsTo = (1.0 / (cHeights - 1)) * pathHeightIndex;
 
                 CoordInfo_t interstitialCoordInfo;
                 interstitialCoordInfo.coordType = CoordTypeInteriorTerrainAdded;
@@ -1206,7 +1215,7 @@ void TransectStyleComplexItem::_buildAndAppendMissionItems(QList<MissionItem*>& 
 {
     int                         seqNum      = _sequenceNumber;
     BuildMissionItemsState_t    buildState  = _buildMissionItemsState();
-    MAV_FRAME                   mavFrame    = MAV_FRAME_GLOBAL_RELATIVE_ALT;
+    MAV_FRAME                   mavFrame;
 
     qCDebug(TransectStyleComplexItemLog) << "_buildAndAppendMissionItems";
 

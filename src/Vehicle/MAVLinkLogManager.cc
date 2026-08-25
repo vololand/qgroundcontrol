@@ -1,5 +1,13 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "MAVLinkLogManager.h"
-#include "QGCFileHelper.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
 #include "SettingsManager.h"
@@ -10,11 +18,11 @@
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QSettings>
+#include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QNetworkReply>
+#include <QtQml/QQmlEngine>
 
-#include "QGCNetworkHelper.h"
-
-QGC_LOGGING_CATEGORY(MAVLinkLogManagerLog, "Vehicle.MAVLinkLogManager")
+QGC_LOGGING_CATEGORY(MAVLinkLogManagerLog, "qgc.vehicle.mavlinklogmanager")
 
 static constexpr const char *kSidecarExtension = ".uploaded";
 
@@ -285,9 +293,15 @@ MAVLinkLogManager::MAVLinkLogManager(Vehicle *vehicle, QObject *parent)
     , _ulogExtension(QStringLiteral(".") + SettingsManager::instance()->appSettings()->logFileExtension)
     , _logPath(SettingsManager::instance()->appSettings()->logSavePath())
 {
-    qCDebug(MAVLinkLogManagerLog) << this;
+    // qCDebug(MAVLinkLogManagerLog) << Q_FUNC_INFO << this;
 
-    QGCNetworkHelper::configureProxy(_networkManager);
+    (void) qmlRegisterUncreatableType<MAVLinkLogManager>("QGroundControl.MAVLinkLogManager", 1, 0, "MAVLinkLogManager", "Reference only");
+
+#if !defined(Q_OS_IOS) && !defined(Q_OS_ANDROID)
+    QNetworkProxy tProxy = _networkManager->proxy();
+    tProxy.setType(QNetworkProxy::DefaultProxy);
+    _networkManager->setProxy(tProxy);
+#endif
 
     QSettings settings;
     settings.beginGroup(kMAVLinkLogGroup);
@@ -305,9 +319,11 @@ MAVLinkLogManager::MAVLinkLogManager(Vehicle *vehicle, QObject *parent)
 
     settings.endGroup();
 
-    if (!QGCFileHelper::ensureDirectoryExists(_logPath)) {
-        qCWarning(MAVLinkLogManagerLog) << "Could not create MAVLink log download path:" << _logPath;
-        _loggingDisabled = true;
+    if (!QDir(_logPath).exists()) {
+        if (!QDir().mkpath(_logPath)) {
+            qCWarning(MAVLinkLogManagerLog) << "Could not create MAVLink log download path:" << _logPath;
+            _loggingDisabled = true;
+        }
     }
 
     if (!_loggingDisabled) {
@@ -330,9 +346,9 @@ MAVLinkLogManager::MAVLinkLogManager(Vehicle *vehicle, QObject *parent)
 
 MAVLinkLogManager::~MAVLinkLogManager()
 {
-    _logFiles->clearAndDeleteContents();
+    // qCDebug(MAVLinkLogManagerLog) << Q_FUNC_INFO << this;
 
-    qCDebug(MAVLinkLogManagerLog) << this;
+    _logFiles->clearAndDeleteContents();
 }
 
 void MAVLinkLogManager::setEmailAddress(const QString &email)

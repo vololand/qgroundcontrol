@@ -1,3 +1,17 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
+/// @file
+///     @brief PX4 Firmware Upgrade operations which occur on a separate thread.
+///     @author Don Gagne <don@thegagnes.com>
+
 #include "PX4FirmwareUpgradeThread.h"
 #include "Bootloader.h"
 #include "FirmwareImage.h"
@@ -24,7 +38,7 @@ PX4FirmwareUpgradeThreadWorker::~PX4FirmwareUpgradeThreadWorker()
 void PX4FirmwareUpgradeThreadWorker::_init(void)
 {
     // We create the timers here so that they are on the right thread
-
+    
     _findBoardTimer = new QTimer(this);
     _findBoardTimer->setSingleShot(true);
     _findBoardTimer->setInterval(500);
@@ -52,11 +66,11 @@ void PX4FirmwareUpgradeThreadWorker::_startFindBoardLoop(void)
 void PX4FirmwareUpgradeThreadWorker::_findBoardOnce(void)
 {
     qCDebug(FirmwareUpgradeVerboseLog) << "_findBoardOnce";
-
+    
     QGCSerialPortInfo               portInfo;
     QGCSerialPortInfo::BoardType_t  boardType;
     QString                         boardName;
-
+    
     if (_findBoardFromPorts(portInfo, boardType, boardName)) {
         if (!_foundBoard) {
             _foundBoard = true;
@@ -91,7 +105,7 @@ void PX4FirmwareUpgradeThreadWorker::_findBoardOnce(void)
             emit noBoardFound();
         }
     }
-
+    
     _findBoardFirstAttempt = false;
     _findBoardTimer->start();
 }
@@ -110,13 +124,13 @@ bool PX4FirmwareUpgradeThreadWorker::_findBoardFromPorts(QGCSerialPortInfo& port
         qCDebug(FirmwareUpgradeVerboseLog) << "\tsystem location:" << info.systemLocation();
         qCDebug(FirmwareUpgradeVerboseLog) << "\tvendor ID:" << info.vendorIdentifier();
         qCDebug(FirmwareUpgradeVerboseLog) << "\tproduct ID:" << info.productIdentifier();
-
+        
         if (info.canFlash()) {
             portInfo = info;
             return true;
         }
     }
-
+    
     return false;
 }
 
@@ -136,7 +150,7 @@ void PX4FirmwareUpgradeThreadWorker::_flash(void)
 
     if (_erase()) {
         emit status(tr("Programming new version..."));
-
+        
         if (_bootloader->program(_controller->image())) {
             qCDebug(FirmwareUpgradeLog) << "Program complete";
             emit status("Program complete");
@@ -144,9 +158,9 @@ void PX4FirmwareUpgradeThreadWorker::_flash(void)
             qCDebug(FirmwareUpgradeLog) << "Program failed:" << _bootloader->errorString();
             goto Error;
         }
-
+        
         emit status(tr("Verifying program..."));
-
+        
         if (_bootloader->verify(_controller->image())) {
             qCDebug(FirmwareUpgradeLog) << "Verify complete";
             emit status(tr("Verify complete"));
@@ -155,14 +169,14 @@ void PX4FirmwareUpgradeThreadWorker::_flash(void)
             goto Error;
         }
     }
-
+    
     emit status(tr("Rebooting board"));
     _reboot();
 
     _bootloader->close();
     _bootloader->deleteLater();
     _bootloader = nullptr;
-
+    
     emit flashComplete();
 
     return;
@@ -178,10 +192,10 @@ Error:
 bool PX4FirmwareUpgradeThreadWorker::_erase(void)
 {
     qCDebug(FirmwareUpgradeLog) << "PX4FirmwareUpgradeThreadWorker::_erase";
-
+    
     emit eraseStarted();
     emit status(tr("Erasing previous program..."));
-
+    
     if (_bootloader->erase()) {
         qCDebug(FirmwareUpgradeLog) << "Erase complete";
         emit status(tr("Erase complete"));
@@ -200,7 +214,7 @@ PX4FirmwareUpgradeThreadController::PX4FirmwareUpgradeThreadController(QObject* 
     _worker         = new PX4FirmwareUpgradeThreadWorker(this);
     _workerThread   = new QThread(this);
     _worker->moveToThread(_workerThread);
-
+    
     connect(_worker, &PX4FirmwareUpgradeThreadWorker::updateProgress,       this, &PX4FirmwareUpgradeThreadController::_updateProgress);
     connect(_worker, &PX4FirmwareUpgradeThreadWorker::foundBoard,           this, &PX4FirmwareUpgradeThreadController::_foundBoard);
     connect(_worker, &PX4FirmwareUpgradeThreadWorker::noBoardFound,         this, &PX4FirmwareUpgradeThreadController::_noBoardFound);
@@ -213,7 +227,7 @@ PX4FirmwareUpgradeThreadController::PX4FirmwareUpgradeThreadController(QObject* 
     connect(_worker, &PX4FirmwareUpgradeThreadWorker::flashComplete,        this, &PX4FirmwareUpgradeThreadController::_flashComplete);
 
     _workerThread->start();
-
+    
     emit _initThreadWorker();
 }
 
@@ -221,7 +235,7 @@ PX4FirmwareUpgradeThreadController::~PX4FirmwareUpgradeThreadController()
 {
     _workerThread->quit();
     _workerThread->wait();
-
+    
     delete _workerThread;
 }
 

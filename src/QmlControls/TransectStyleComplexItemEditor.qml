@@ -4,8 +4,12 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.ScreenTools
+import QGroundControl.Vehicle
 import QGroundControl.Controls
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.Palette
 import QGroundControl.FlightMap
 
 Rectangle {
@@ -179,13 +183,7 @@ Rectangle {
                         Layout.fillWidth:   true
                         text:               qsTr("Delete Preset")
                         enabled:            _missionItem.presetNames.length != 0
-                        onClicked:          deletePresetDialogFactory.open({ presetName: presetCombo.textAt(presetCombo.currentIndex) })
-
-                        QGCPopupDialogFactory {
-                            id: deletePresetDialogFactory
-
-                            dialogComponent: deletePresetDialog
-                        }
+                        onClicked:          deletePresetDialog.createObject(mainWindow, { presetName: presetCombo.textAt(presetCombo.currentIndex) }).open()
 
                         Component {
                             id: deletePresetDialog
@@ -209,7 +207,7 @@ Rectangle {
                     Layout.alignment:   Qt.AlignCenter
                     Layout.fillWidth:   true
                     text:               qsTr("Save Settings As New Preset")
-                    onClicked:          savePresetDialogFactory.open()
+                    onClicked:          savePresetDialog.createObject(mainWindow).open()
                 }
 
                 SectionHeader {
@@ -239,12 +237,6 @@ Rectangle {
                 }
             } // Main editing column
         } // Top level  Column
-
-        QGCPopupDialogFactory {
-            id: savePresetDialogFactory
-
-            dialogComponent: savePresetDialog
-        }
 
         Component {
             id: savePresetDialog

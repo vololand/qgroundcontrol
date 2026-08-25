@@ -1,22 +1,12 @@
 name: Common Setup
 description: Common Setup for All Runners
 runs:
-  using: composite
+  using: "composite"
   steps:
-    - name: Free Disk Space
-      if: runner.os == 'Linux'
-      uses: jlumbroso/free-disk-space@v1.3.1
+    - uses: lukka/get-cmake@latest
+    - uses: actions/setup-python@v5
       with:
-        tool-cache: false
-        android: false
-        large-packages: false
+        python-version: '>=3.9.x'
 
-    - uses: lukka/get-cmake@v4.2.1
-
-    - uses: actions/setup-python@v6
-      with:
-        python-version: '>=3.9'
-
-    - name: Create build directory
+    - run: mkdir $RUNNER_TEMP/shadow_build_dir
       shell: bash
-      run: mkdir -p "$RUNNER_TEMP/build"

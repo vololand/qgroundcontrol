@@ -1,11 +1,24 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.Controllers
 
 /// Page for sensor calibration. This control is used within the SensorsComponent control and can also be used
 /// standalone for custom uis. When using standadalone you can use the various show* bools to show/hide what you want.
@@ -61,6 +74,7 @@ Item {
     property bool showCompass2Rot: cal_mag2_id.value > 0 && cal_mag2_rot.value >= 0
 
     property bool   _sensorsHaveFixedOrientation:       QGroundControl.corePlugin.options.sensorsHaveFixedOrientation
+    property bool   _wifiReliableForCalibration:        QGroundControl.corePlugin.options.wifiReliableForCalibration
     property int    _buttonWidth:                       ScreenTools.defaultFontPixelWidth * 15
     property string _calMagIdParamFormat:               "CAL_MAG#_ID"
     property string _calMagRotParamFormat:              "CAL_MAG#_ROT"
@@ -79,7 +93,6 @@ Item {
                     return index
                 }
             }
-            console.warn("SensorSetup.qml:currentMagParamCount internal error")
             return -1
         }
     }
@@ -101,7 +114,6 @@ Item {
                     return externalMagCount
                 }
             }
-            console.warn("SensorSetup.qml:currentExternalMagCount internal error")
             return 0
         }
     }
@@ -149,20 +161,21 @@ Item {
         onMagCalComplete: {
             setOrientationsButton.visible               = orientationsButtonVisible()
             setOrientationsDialogShowBoardOrientation   = false
-            setOrientationsDialogFactory.open({ title: qsTr("Compass Calibration Complete"), showRebootVehicleButton: true })
+            setOrientationsDialogComponent.createObject(mainWindow, { title: qsTr("Compass Calibration Complete"), showRebootVehicleButton: true }).open()
         }
 
         onWaitingForCancelChanged: {
             if (controller.waitingForCancel) {
-                waitForCancelDialogFactory.open()
+                waitForCancelDialogComponent.createObject(mainWindow).open()
             }
         }
     }
 
-    QGCPopupDialogFactory {
-        id: waitForCancelDialogFactory
-
-        dialogComponent: waitForCancelDialogComponent
+    Component.onCompleted: {
+        var usingUDP = controller.usingUDPLink()
+        if (usingUDP && !_wifiReliableForCalibration) {
+            mainWindow.showMessageDialog(qsTr("Sensor Calibration"), qsTr("Performing sensor calibration over a WiFi connection is known to be unreliable. You should disconnect and perform calibration using a direct USB connection instead."))
+        }
     }
 
     Component {
@@ -183,12 +196,6 @@ Item {
                 }
             }
         }
-    }
-
-    QGCPopupDialogFactory {
-        id: preCalibrationDialogFactory
-
-        dialogComponent: preCalibrationDialogComponent
     }
 
     Component {
@@ -257,12 +264,6 @@ Item {
     }
 
     property bool setOrientationsDialogShowBoardOrientation:    true
-
-    QGCPopupDialogFactory {
-        id: setOrientationsDialogFactory
-
-        dialogComponent: setOrientationsDialogComponent
-    }
 
     Component {
         id: setOrientationsDialogComponent
@@ -349,7 +350,7 @@ Item {
                 onClicked: {
                     preCalibrationDialogType = "compass"
                     preCalibrationDialogHelp = compassHelp
-                    preCalibrationDialogFactory.open({ title: qsTr("Calibrate Compass") })
+                    preCalibrationDialogComponent.createObject(mainWindow, { title: qsTr("Calibrate Compass") }).open()
                 }
             }
 
@@ -363,7 +364,7 @@ Item {
                 onClicked: {
                     preCalibrationDialogType = "gyro"
                     preCalibrationDialogHelp = gyroHelp
-                    preCalibrationDialogFactory.open({ title: qsTr("Calibrate Gyro") })
+                    preCalibrationDialogComponent.createObject(mainWindow, { title: qsTr("Calibrate Gyro") }).open()
                 }
             }
 
@@ -377,7 +378,7 @@ Item {
                 onClicked: {
                     preCalibrationDialogType = "accel"
                     preCalibrationDialogHelp = accelHelp
-                    preCalibrationDialogFactory.open({ title: qsTr("Calibrate Accelerometer") })
+                    preCalibrationDialogComponent.createObject(mainWindow, { title: qsTr("Calibrate Accelerometer") }).open()
                 }
             }
 
@@ -392,7 +393,7 @@ Item {
                 onClicked: {
                     preCalibrationDialogType = "level"
                     preCalibrationDialogHelp = levelHelp
-                    preCalibrationDialogFactory.open({ title: qsTr("Level Horizon") })
+                    preCalibrationDialogComponent.createObject(mainWindow, { title: qsTr("Level Horizon") }).open()
                 }
             }
 
@@ -400,7 +401,7 @@ Item {
                 id:             airspeedButton
                 width:          _buttonWidth
                 text:           qsTr("Airspeed")
-                visible:        vehicleComponent.airspeedCalSupported &&
+                visible:        vehicleComponent.airspeedCalSupported && 
                                     QGroundControl.corePlugin.options.showSensorCalibrationAirspeed &&
                                     showSensorCalibrationAirspeed
                 indicatorGreen: sens_dpres_off.value !== 0
@@ -408,7 +409,7 @@ Item {
                 onClicked: {
                     preCalibrationDialogType = "airspeed"
                     preCalibrationDialogHelp = airspeedHelp
-                    preCalibrationDialogFactory.open({ title: qsTr("Calibrate Airspeed") })
+                    preCalibrationDialogComponent.createObject(mainWindow, { title: qsTr("Calibrate Airspeed") }).open()
                 }
             }
 
@@ -437,7 +438,7 @@ Item {
 
                 onClicked:  {
                     setOrientationsDialogShowBoardOrientation = true
-                    setOrientationsDialogFactory.open({ title: qsTr("Set Orientations"), showRebootVehicleButton: false })
+                    setOrientationsDialogComponent.createObject(mainWindow, { title: qsTr("Set Orientations"), showRebootVehicleButton: false }).open()
                 }
             }
         } // Column - Buttons

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -25,7 +34,7 @@ public:
     /// Called to handle mission item related messages. All messages should be passed to this method.
     /// It will handle the appropriate set.
     ///     @return true: message handled
-    bool handleMavlinkMessage(const mavlink_message_t &msg);
+    bool handleMessage(const mavlink_message_t &msg);
 
     enum FailureMode_t {
         FailNone,                           // No failures
@@ -102,3 +111,4 @@ private:
     bool _failReadRequest1FirstResponse = true;
     bool _failWriteMissionCountFirstResponse = true;
 };
+

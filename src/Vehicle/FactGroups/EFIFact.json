@@ -117,20 +117,6 @@
     "shortDesc":        "Pt Compensation",
     "type":             "float",
     "decimalPlaces":    1
-},
-{
-    "name":             "ignVoltage",
-    "shortDesc":        "Ignition Voltage",
-    "type":             "float",
-    "decimalPlaces":    1,
-    "units":            "V"
-},
-{
-    "name":             "fuelPressure",
-    "shortDesc":        "Fuel Pressure",
-    "type":             "float",
-    "decimalPlaces":    1,
-    "units":            "kPa"
 }
 ]
 }

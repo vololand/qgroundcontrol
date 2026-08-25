@@ -1,5 +1,6 @@
 <RCC>
 	<qresource prefix="/InstrumentValueIcons">
+		<file alias="crypto.svg">crypto.svg</file>
 		<file alias="clipboard.svg">clipboard.svg</file>
 		<file alias="credit-card.svg">credit-card.svg</file>
 		<file alias="bookmark copy 2.svg">bookmark copy 2.svg</file>

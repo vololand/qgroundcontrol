@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QJsonObject>
@@ -13,7 +22,7 @@ class QGCCachedFileDownload;
 class ComponentInformationTranslation : public QObject
 {
     Q_OBJECT
-
+    
 public:
     ComponentInformationTranslation(QObject* parent, QGCCachedFileDownload* cachedFileDownload);
 
@@ -31,7 +40,7 @@ signals:
     void downloadComplete(QString translatedJsonTempFile, QString errorMsg);
 
 private slots:
-    void onDownloadCompleted(bool success, const QString &localFile, QString errorMsg, bool fromCache);
+    void onDownloadCompleted(QString remoteFile, QString localFile, QString errorMsg);
 private:
     QString getUrlFromSummaryJson(const QString& summaryJsonFile, const QString& locale);
 

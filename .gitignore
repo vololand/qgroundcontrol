@@ -1,169 +1,96 @@
-# ==============================================================================
-# QGroundControl - Git Ignore Patterns
-# ==============================================================================
-
-# ------------------------------------------------------------------------------
-# IDEs & Editors
-# ------------------------------------------------------------------------------
 .idea/
-.qtcreator/
-.fleet/
-.vs/
-.settings/
-
-# VS Code - track .default files, ignore personal overrides
-.vscode/*
-!.vscode/extensions.json
-!.vscode/*.default.json
-
-# Editor temp/backup files
-*.swp
-*~
-*~.skp
-*.autosave
-tags
-
-# ------------------------------------------------------------------------------
-# Build System & CMake
-# ------------------------------------------------------------------------------
-build*/
+.vscode/
+.cache/
 cmake-build-*/
 out/
-CMakeFiles
-CMakeLists.txt.user*
-CMakeUserPresets.json
-compile_commands.json
-cpm_modules
-.cache/
-
-# ------------------------------------------------------------------------------
-# Qt Generated Files
-# ------------------------------------------------------------------------------
+libs/lib/Frameworks/GStreamer.framework
 *_qmlcache.qrc
-qrc_*.cpp
-moc_*
-ui_*
-*.moc
-*.prl
-*.qm
-.qmlls.ini
-
-# ------------------------------------------------------------------------------
-# Compiled Objects & Binaries
-# ------------------------------------------------------------------------------
-*.o
-*.Debug
-*.Release
-*.app
-*.exe
-*.idb
-*.pdb
-tmp/
-obj/
-debug/
-release/
-/qgroundcontrol
+*.swp
+*.nfs
+CMakeFiles
+tags
+build*/
+obj
+.DS_Store
+*.log
+*~
+*~.skp
 bin/*.exe
 bin/*.txt
 bin/mac
-
-# Libraries & dynamic/static objects
-*.a
-*.lib
-*.so
-*.so.*
-*.dylib
-*.dll
-
-# Build tool artifacts
-Makefile
-*.ninja
-.ninja_log
-build.ninja
-
-# Packaging & distribution
-*.dmg
-*.deb
-*.rpm
-*.AppImage
-*.apk
-*.aab
-*.ipa
-
-# ------------------------------------------------------------------------------
-# Platform-Specific
-# ------------------------------------------------------------------------------
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows - Visual Studio
+*pro.user*
+.qmake.stash
+qrc_*.cpp
+*.Debug
+*.Release
+tmp
+debug
+release
+/qgroundcontrol
+qgroundcontrol.xcodeproj/**
+doc/html
+doc/doxy.log
+controller_log*
+user_config.pri
+*.app
+*.ncb
 *.vcproj
 *.vcxproj*
-*.sln
-*.suo
-*.ncb
 *.sdf
 *.ipch
-*.opensdf
+*.pdb
+*.sln
+*.sln
+*.vcproj
+*.user
+*.ncb
+*.idb
+*.project
+*.cproject
+*.sln
+*.suo
 *.uhf.txt
+*.opensdf
+thirdParty/qserialport-build-desktop/
+thirdParty/qserialport/bin/
+thirdParty/qserialport/lib/
+libs/thirdParty/libxbee/lib/
+GeneratedFiles/
+gstreamer-1.0-android*
+localization/qgroundcontrol/
 
-# iOS
+*.autosave
+.settings/
+
+# iOS Generated files
 ios/iOSForAppStore-Info.plist
 
-# Android
+# Generated files
+moc_*
+ui_*
+*.o
+*.moc
+*.prl
+.qmlls.ini
+
+# android
 android/local.properties
 *.class
 
-# Linux
-*.nfs
+# doxygen
+src/html/
+src/latex/
 
-# ------------------------------------------------------------------------------
-# Dependencies & Third Party
-# ------------------------------------------------------------------------------
-# Node.js (vitepress for user guide)
+# vagrant
+.vagrant/
+Qt*-linux*.tar.*
+
+.vs/
+
+# vitepress - user guide
 node_modules/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 
-# Python
-*.pyc
-__pycache__/
-
-# ------------------------------------------------------------------------------
-# Runtime & Logs
-# ------------------------------------------------------------------------------
-*.log
-
-# Code coverage
-*.gcov
-*.gcda
-*.gcno
-*.coverage
-
-# ------------------------------------------------------------------------------
-# Vagrant
-# ------------------------------------------------------------------------------
-.vagrant/
-Qt*-linux*.tar.*
-
-# ------------------------------------------------------------------------------
-# Local Development Tools
-# ------------------------------------------------------------------------------
-
-# AI Assistants
-.claude/
-.claudeignore
-.geminiignore
-.cursorignore
-**/CLAUDE.md
-
-# Pre-commit hooks
-.ruff_cache/
-
-# Vale prose linter (downloaded via `vale sync`)
-.github/styles/
-.gemini/
-.pytest_cache/
+CMakeUserPresets.json
+cpm_modules

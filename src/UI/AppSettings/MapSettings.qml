@@ -1,11 +1,25 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
+import QGroundControl.MultiVehicleManager
+import QGroundControl.Palette
 import QGroundControl.QGCMapEngineManager
 
 Item {
@@ -15,13 +29,12 @@ Item {
     property var    _appSettings:                   _settingsManager.appSettings
     property var    _mapsSettings:                  _settingsManager.mapsSettings
     property var    _mapEngineManager:              QGroundControl.mapEngineManager
-    property bool   _currentlyImportOrExporting:    _mapEngineManager.importAction === QGCMapEngineManager.ImportAction.ActionExporting || _mapEngineManager.importAction === QGCMapEngineManager.ImportAction.ActionImporting
+    property bool   _currentlyImportOrExporting:    _mapEngineManager.importAction === QGCMapEngineManager.ActionExporting || _mapEngineManager.importAction === QGCMapEngineManager.ActionImporting
     property real   _largeTextFieldWidth:           ScreenTools.defaultFontPixelWidth * 30
 
     property Fact   _mapProviderFact:   _settingsManager.flightMapSettings.mapProvider
     property Fact   _mapTypeFact:       _settingsManager.flightMapSettings.mapType
     property Fact   _elevationProviderFact: _settingsManager.flightMapSettings.elevationMapProvider
-    property Fact   _tiandituFac:       _settingsManager ? _settingsManager.appSettings.tiandituToken : null
     property Fact   _mapboxFact:        _settingsManager ? _settingsManager.appSettings.mapboxToken : null
     property Fact   _mapboxAccountFact: _settingsManager ? _settingsManager.appSettings.mapboxAccount : null
     property Fact   _mapboxStyleFact:   _settingsManager ? _settingsManager.appSettings.mapboxStyle : null
@@ -39,7 +52,7 @@ Item {
 
         Connections {
             target:                 _mapEngineManager
-            function onErrorMessageChanged() { errorDialogFactory.open() }
+            onErrorMessageChanged:  errorDialogComponent.createObject(mainWindow).open()
         }
 
         SettingsGroupLayout {
@@ -116,8 +129,8 @@ Item {
                 visible:    QGroundControl.corePlugin.options.showOfflineMapImport
                 enabled:    !_currentlyImportOrExporting
                 onClicked: {
-                    _mapEngineManager.importAction = QGCMapEngineManager.ImportAction.ActionNone
-                    importDialogFactory.open()
+                    _mapEngineManager.importAction = QGCMapEngineManager.ActionNone
+                    importDialogComponent.createObject(mainWindow).open()
                 }
             }
 
@@ -126,7 +139,7 @@ Item {
                 buttonText: qsTr("Export")
                 visible:    QGroundControl.corePlugin.options.showOfflineMapExport
                 enabled:    !_currentlyImportOrExporting
-                onClicked:  exportDialogFactory.open()
+                onClicked:  exportDialogComponent.createObject(mainWindow).open()
             }
 
             RowLayout {
@@ -135,7 +148,7 @@ Item {
 
                 QGCLabel {
                     Layout.fillWidth:   true
-                    text:               _mapEngineManager.importAction === QGCMapEngineManager.ImportAction.ActionExporting ? qsTr("Exporting") : qsTr("Importing")
+                    text:               _mapEngineManager.importAction === QGCMapEngineManager.ActionExporting ? qsTr("Exporting") : qsTr("Importing")
                     font.bold:          true
                 }
                 ProgressBar {
@@ -154,12 +167,6 @@ Item {
 
             LabelledFactTextField {
                 textFieldPreferredWidth:    _largeTextFieldWidth
-                label:                      qsTr("TianDiTu")
-                fact:                       _appSettings.tiandituToken
-            }
-
-            LabelledFactTextField {
-                textFieldPreferredWidth:    _largeTextFieldWidth
                 label:                      qsTr("Mapbox")
                 fact:                       _appSettings.mapboxToken
             }
@@ -174,12 +181,6 @@ Item {
                 textFieldPreferredWidth:    _largeTextFieldWidth
                 label:                      qsTr("VWorld")
                 fact:                       _appSettings.vworldToken
-            }
-
-            LabelledFactTextField {
-                textFieldPreferredWidth:    _largeTextFieldWidth
-                label:                      qsTr("OpenAIP")
-                fact:                       _appSettings.openaipToken
             }
         }
 
@@ -222,7 +223,7 @@ Item {
 
             LabelledFactTextField {
                 fact: _mapsSettings.maxCacheMemorySize
-            }
+            }    
         }
 
         QGCFileDialog {
@@ -240,12 +241,6 @@ Item {
                 close()
                 _mapEngineManager.importSets(file)
             }
-        }
-
-        QGCPopupDialogFactory {
-            id: exportDialogFactory
-
-            dialogComponent: exportDialogComponent
         }
 
         Component {
@@ -277,12 +272,6 @@ Item {
             }
         }
 
-        QGCPopupDialogFactory {
-            id: importDialogFactory
-
-            dialogComponent: importDialogComponent
-        }
-
         Component {
             id: importDialogComponent
 
@@ -311,12 +300,6 @@ Item {
                     }
                 }
             }
-        }
-
-        QGCPopupDialogFactory {
-            id: errorDialogFactory
-
-            dialogComponent: errorDialogComponent
         }
 
         Component {

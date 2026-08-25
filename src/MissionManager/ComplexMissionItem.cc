@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "ComplexMissionItem.h"
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
@@ -135,3 +144,4 @@ void ComplexMissionItem::_segmentTerrainCollisionChanged(bool terrainCollision)
     }
     emit terrainCollisionChanged(_cTerrainCollisionSegments != 0);
 }
+

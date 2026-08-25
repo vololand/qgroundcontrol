@@ -1,11 +1,23 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
-import QGroundControl
+import QGroundControl.FactSystem
 import QGroundControl.FactControls
+import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
 
 SetupPage {
     id:             powerPage
@@ -461,7 +473,7 @@ SetupPage {
                 QGCButton {
                     text:       qsTr("Calculate")
                     visible:    _showAdvanced
-                    onClicked:  calcVoltageMultiplierDlgFactory.open({ vehicleVoltageFact: vehicleVoltage, battVoltMultFact: battVoltMult })
+                    onClicked:  calcVoltageMultiplierDlgComponent.createObject(mainWindow, { vehicleVoltageFact: vehicleVoltage, battVoltMultFact: battVoltMult }).open()
                 }
 
                 QGCLabel {
@@ -487,7 +499,7 @@ SetupPage {
                 QGCButton {
                     text:       qsTr("Calculate")
                     visible:    _showAdvanced
-                    onClicked:  calcAmpsPerVoltDlgFactory.open({ vehicleCurrentFact: vehicleCurrent, battAmpPerVoltFact: battAmpPerVolt })
+                    onClicked:  calcAmpsPerVoltDlgComponent.createObject(mainWindow, { vehicleCurrentFact: vehicleCurrent, battAmpPerVoltFact: battAmpPerVolt }).open()
                 }
 
                 QGCLabel {
@@ -522,12 +534,6 @@ SetupPage {
             } // GridLayout
         } // Column
     } // Component - powerSetupComponent
-
-    QGCPopupDialogFactory {
-        id: calcVoltageMultiplierDlgFactory
-
-        dialogComponent: calcVoltageMultiplierDlgComponent
-    }
 
     Component {
         id: calcVoltageMultiplierDlgComponent
@@ -582,12 +588,6 @@ SetupPage {
         }
     }
 
-    QGCPopupDialogFactory {
-        id: calcAmpsPerVoltDlgFactory
-
-        dialogComponent: calcAmpsPerVoltDlgComponent
-    }
-
     Component {
         id: calcAmpsPerVoltDlgComponent
 
@@ -640,5 +640,4 @@ SetupPage {
             }
         }
     }
-
 } // SetupPage

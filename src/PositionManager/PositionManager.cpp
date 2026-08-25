@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "PositionManager.h"
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
@@ -5,30 +14,36 @@
 // #include "DeviceInfo.h"
 #include "QGCLoggingCategory.h"
 
-#include <QtCore/QApplicationStatic>
+#include <QtCore/qapplicationstatic.h>
 #include <QtCore/QPermissions>
 #include <QtPositioning/QGeoPositionInfoSource>
 #include <QtPositioning/private/qgeopositioninfosource_p.h>
 #include <QtPositioning/QNmeaPositionInfoSource>
+#include <QtQml/qqml.h>
 
-QGC_LOGGING_CATEGORY(QGCPositionManagerLog, "PositionManager.QGCPositionManager")
+QGC_LOGGING_CATEGORY(QGCPositionManagerLog, "qgc.positionmanager.positionmanager")
 
 Q_APPLICATION_STATIC(QGCPositionManager, _positionManager);
 
 QGCPositionManager::QGCPositionManager(QObject *parent)
     : QObject(parent)
 {
-    qCDebug(QGCPositionManagerLog) << this;
+    // qCDebug(QGCPositionManagerLog) << Q_FUNC_INFO << this;
 }
 
 QGCPositionManager::~QGCPositionManager()
 {
-    qCDebug(QGCPositionManagerLog) << this;
+    // qCDebug(QGCPositionManagerLog) << Q_FUNC_INFO << this;
 }
 
 QGCPositionManager *QGCPositionManager::instance()
 {
     return _positionManager();
+}
+
+void QGCPositionManager::registerQmlTypes()
+{
+    (void) qmlRegisterUncreatableType<QGCPositionManager>("QGroundControl.QGCPositionManager", 1, 0, "QGCPositionManager", "Reference only");
 }
 
 void QGCPositionManager::init()

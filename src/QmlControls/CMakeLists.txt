@@ -1,8 +1,3 @@
-# ============================================================================
-# QML Controls Module
-# Reusable QML UI controls and controllers
-# ============================================================================
-
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
         EditPositionDialogController.cc
@@ -19,8 +14,6 @@ target_sources(${CMAKE_PROJECT_NAME}
         MavlinkAction.h
         MavlinkActionManager.cc
         MavlinkActionManager.h
-        ObjectListModelBase.cc
-        ObjectListModelBase.h
         ParameterEditorController.cc
         ParameterEditorController.h
         QGCFenceCircle.cc
@@ -62,39 +55,52 @@ target_sources(${CMAKE_PROJECT_NAME}
         ToolStripAction.h
         ToolStripActionList.cc
         ToolStripActionList.h
+        CustomMissionReorderHelper.cc
+        CustomMissionReorderHelper.h
+        CustomRtspReceiver.cc
+        CustomRtspReceiver.h
+        EncryptedRtspClient.cc
+        EncryptedRtspClient.h
+        TngVideoCryptoService.cc
+        TngVideoCryptoService.h
+        VideoPassthroughHelper.cc
+        VideoPassthroughHelper.h
+        VideoEndpointSettings.cc
+        VideoEndpointSettings.h
+        VideoCryptoSettings.cc
+        VideoCryptoSettings.h
+        LoginIdHistory.cc
+        LoginIdHistory.h
+        WindowHelper.cc
+        WindowHelper.h
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# ----------------------------------------------------------------------------
-# QML Controls Module
-# ----------------------------------------------------------------------------
 qt_add_library(QGroundControlControlsModule STATIC)
-
-set_source_files_properties(ScreenTools.qml PROPERTIES
-    QT_QML_SINGLETON_TYPE TRUE
-)
 
 qt_add_qml_module(QGroundControlControlsModule
     URI QGroundControl.Controls
     VERSION 1.0
     RESOURCE_PREFIX /qml
     QML_FILES
-        AltModeCombo.qml
         AltModeDialog.qml
         AppSettings.qml
         APMSubMotorDisplay.qml
-        AppLogging.qml
+        AppMessages.qml
         AutotuneUI.qml
         AxisMonitor.qml
         ClickableColor.qml
         ConfigButton.qml
+        CustomPlanView.qml
+        CustomPlanViewToolBar.qml
         DeadMouseArea.qml
         DropButton.qml
         DropPanel.qml
         EditPositionDialog.qml
         ExclusiveGroupItem.qml
         FactSlider.qml
+        FactSliderPanel.qml
         FileButton.qml
         FlightModeMenu.qml
         HeightIndicator.qml
@@ -131,7 +137,6 @@ qt_add_qml_module(QGroundControlControlsModule
         QGCColoredImage.qml
         QGCColumnButton.qml
         QGCComboBox.qml
-        QGCDelayButton.qml
         QGCDynamicObjectManager.qml
         QGCFileDialog.qml
         QGCFlickable.qml
@@ -149,12 +154,12 @@ qt_add_qml_module(QGroundControlControlsModule
         QGCOptionsComboBox.qml
         QGCPageIndicator.qml
         QGCPopupDialog.qml
-        QGCPopupDialogFactory.qml
         QGCRadioButton.qml
         QGCRoundButton.qml
         QGCSimpleMessageDialog.qml
         QGCSlider.qml
         QGCSwipeView.qml
+        QGCSwitch.qml
         QGCTabBar.qml
         QGCTabButton.qml
         QGCTextField.qml
@@ -178,9 +183,8 @@ qt_add_qml_module(QGroundControlControlsModule
         VehicleRotationCal.qml
         VehicleSummaryRow.qml
 
-# NOTE: Due to Windows limitations with set_source_files_properties and qt_add_qml_module,
-# various QML files from other modules are temporarily included here.
-# This will be revisited in a future release.
+# Due to the fact t hatset_source_files_properties with QT_RESOURCE_ALIAS doesn't work in cmombination with qt_qdd_add_qml_module on Windows.
+# We had to move various qml files to this directory to get things to work. We will revisit this in the 5.1 release.
 
         # src/AnalyzeView/
         AnalyzePage.qml
@@ -199,18 +203,19 @@ qt_add_qml_module(QGroundControlControlsModule
         GeoFenceEditor.qml
         GeoFenceMapVisuals.qml
         MissionItemEditor.qml
+        CustomMissionItemEditor.qml
         MissionItemMapVisual.qml
         MissionItemStatus.qml
         MissionSettingsEditor.qml
-        MissionStats.qml
+        CustomMissionSettingEditor.qml
         PlanEditToolbar.qml
         PlanToolBarIndicators.qml
         PlanView.qml
-        PlanViewRightPanel.qml
         RallyPointEditorHeader.qml
         RallyPointItemEditor.qml
         RallyPointMapVisuals.qml
         SimpleItemEditor.qml
+        CustomSimpleItemEditor.qml
         SimpleItemMapVisual.qml
         StructureScanEditor.qml
         StructureScanMapVisual.qml
@@ -239,7 +244,6 @@ qt_add_qml_module(QGroundControlControlsModule
         GPSIndicatorPage.qml
         MainStatusIndicator.qml
         MainStatusIndicatorOfflinePage.qml
-        ParameterDownloadProgress.qml
         PlanViewToolBar.qml
         RemoteIDIndicatorPage.qml
         SignalStrength.qml
@@ -248,15 +252,21 @@ qt_add_qml_module(QGroundControlControlsModule
         # src/QtLocationPlugin/QMLControl/
         OfflineMapEditor.qml
 
-        ScreenTools.qml
-    NO_PLUGIN
+    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
 )
 
-# ----------------------------------------------------------------------------
-# Control Configuration Resources
-# ----------------------------------------------------------------------------
-file(GLOB_RECURSE JSON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.json)
-qt_add_resources(${CMAKE_PROJECT_NAME} json_controls
-    PREFIX "/json"
-    FILES ${JSON_FILES}
+qt_add_library(ScreenToolsModule STATIC)
+
+set_source_files_properties(ScreenTools.qml PROPERTIES
+    QT_QML_SINGLETON_TYPE TRUE
 )
+
+qt_add_qml_module(ScreenToolsModule
+    URI QGroundControl.ScreenTools
+    VERSION 1.0
+    RESOURCE_PREFIX /qml
+    QML_FILES
+        ScreenTools.qml
+    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
+)
+

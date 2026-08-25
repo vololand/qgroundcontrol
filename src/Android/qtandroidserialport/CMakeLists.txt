@@ -1,9 +1,3 @@
-# ============================================================================
-# Qt Android Serial Port
-# Android-specific serial port implementation
-# ============================================================================
-
-# Only build on Android platforms
 if(NOT ANDROID)
     return()
 endif()
@@ -25,5 +19,4 @@ target_sources(${CMAKE_PROJECT_NAME}
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# TODO: Enable I/O device debugging
 # target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QIODEVICE_DEBUG)

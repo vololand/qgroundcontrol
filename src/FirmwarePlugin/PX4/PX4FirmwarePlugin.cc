@@ -1,7 +1,20 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "PX4FirmwarePlugin.h"
 #include "PX4ParameterMetaData.h"
 #include "QGCApplication.h"
 #include "PX4AutoPilotPlugin.h"
+#include "PX4SimpleFlightModesController.h"
+#include "AirframeComponentController.h"
+#include "SensorsComponentController.h"
+#include "PowerComponentController.h"
 #include "SettingsManager.h"
 #include "PlanViewSettings.h"
 #include "ParameterManager.h"
@@ -21,6 +34,11 @@ PX4FirmwarePluginInstanceData::PX4FirmwarePluginInstanceData(QObject* parent)
 
 PX4FirmwarePlugin::PX4FirmwarePlugin()
 {
+    qmlRegisterType<PX4SimpleFlightModesController>     ("QGroundControl.Controllers", 1, 0, "PX4SimpleFlightModesController");
+    qmlRegisterType<AirframeComponentController>        ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
+    qmlRegisterType<SensorsComponentController>         ("QGroundControl.Controllers", 1, 0, "SensorsComponentController");
+    qmlRegisterType<PowerComponentController>           ("QGroundControl.Controllers", 1, 0, "PowerComponentController");
+
     const QString manualFlightModeName = tr("Manual");
     const QString acroFlightModeName = tr("Acro");
     const QString stabilizedFlightModeName = tr("Stabilized");
@@ -115,13 +133,18 @@ QStringList PX4FirmwarePlugin::flightModes(Vehicle* vehicle) const
 
 QString PX4FirmwarePlugin::flightMode(uint8_t base_mode, uint32_t custom_mode) const
 {
-    QString flightMode = "Unknown";
-
+    // PX4 fills custom_mode with the current nav state in HEARTBEAT, but base_mode flags
+    // (including MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) can differ while disarmed vs armed.
+    // Decoding only when CUSTOM_MODE_ENABLED is set makes the UI "change mode" on arm
+    // even though custom_mode is unchanged — so prefer a known custom_mode mapping first.
+    if (_modeEnumToString.contains(custom_mode)) {
+        return _modeEnumToString.value(custom_mode);
+    }
     if (base_mode & MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) {
-        return _modeEnumToString.value(custom_mode, tr("Unknown %1:%2").arg(base_mode).arg(custom_mode));
+        return tr("Unknown %1:%2").arg(base_mode).arg(custom_mode);
     }
 
-    return flightMode;
+    return tr("Unknown");
 }
 
 bool PX4FirmwarePlugin::setFlightMode(const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode) const
@@ -322,13 +345,20 @@ void PX4FirmwarePlugin::_mavCommandResult(int vehicleId, int component, int comm
 
 void PX4FirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffAltRel) const
 {
-    double vehicleAltitudeAMSL = vehicle->altitudeAMSL()->rawValue().toDouble();
+    // Sanity: need a position fix (same check as before — relies on AMSL from GLOBAL_POSITION / GPS).
+    const double vehicleAltitudeAMSL = vehicle->altitudeAMSL()->rawValue().toDouble();
     if (qIsNaN(vehicleAltitudeAMSL)) {
         qgcApp()->showAppMessage(tr("Unable to takeoff, vehicle position not known."));
         return;
     }
 
-    double takeoffAltAMSL = takeoffAltRel + vehicleAltitudeAMSL;
+    // MAV_CMD_NAV_TAKEOFF param7: meters above home / takeoff reference (same convention as APMFirmwarePlugin).
+    // Sending AMSL (takeoffAltRel + vehicleAltitudeAMSL) produced values like ~498 when GPS AMSL ~488 and UI asked 10 m,
+    // which PX4 treats as a relative altitude setpoint → extreme climb. Use relative altitude only.
+    double relAlt = minimumTakeoffAltitudeMeters(vehicle);
+    if (!qIsNaN(takeoffAltRel) && takeoffAltRel > relAlt) {
+        relAlt = takeoffAltRel;
+    }
 
     connect(vehicle, &Vehicle::mavCommandResult, this, &PX4FirmwarePlugin::_mavCommandResult);
     vehicle->sendMavCommand(
@@ -338,7 +368,7 @@ void PX4FirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffAltRel
         -1,                                     // No pitch requested
         0, 0,                                   // param 2-4 unused
         NAN, NAN, NAN,                          // No yaw, lat, lon
-        static_cast<float>(takeoffAltAMSL));    // AMSL altitude
+        static_cast<float>(relAlt));            // altitude above home (m)
 }
 
 double PX4FirmwarePlugin::maximumHorizontalSpeedMultirotor(Vehicle* vehicle) const
@@ -752,6 +782,37 @@ bool PX4FirmwarePlugin::hasGripper(const Vehicle* vehicle) const
     return false;
 }
 
+QVariant PX4FirmwarePlugin::mainStatusIndicatorContentItem(const Vehicle*) const
+{
+    return QVariant::fromValue(QUrl::fromUserInput("qrc:/PX4/Indicators/PX4MainStatusIndicatorContentItem.qml"));
+}
+
+const QVariantList& PX4FirmwarePlugin::toolIndicators(const Vehicle* vehicle)
+{
+    if (_toolIndicatorList.size() == 0) {
+        // First call the base class to get the standard QGC list
+        _toolIndicatorList = FirmwarePlugin::toolIndicators(vehicle);
+
+        // Find the generic flight mode indicator and replace with the custom one
+        for (int i=0; i<_toolIndicatorList.size(); i++) {
+            if (_toolIndicatorList.at(i).toUrl().toString().contains("FlightModeIndicator.qml")) {
+                _toolIndicatorList[i] = QVariant::fromValue(QUrl::fromUserInput("qrc:/PX4/Indicators/PX4FlightModeIndicator.qml"));
+                break;
+            }
+        }
+
+        // Find the generic battery indicator and replace with the custom one
+        for (int i=0; i<_toolIndicatorList.size(); i++) {
+            if (_toolIndicatorList.at(i).toUrl().toString().contains("BatteryIndicator.qml")) {
+                _toolIndicatorList[i] = QVariant::fromValue(QUrl::fromUserInput("qrc:/PX4/Indicators/PX4BatteryIndicator.qml"));
+                break;
+            }
+        }
+    }
+
+    return _toolIndicatorList;
+}
+
 void PX4FirmwarePlugin::updateAvailableFlightModes(FlightModeList &modeList)
 {
     for(auto &mode: modeList){
@@ -810,17 +871,4 @@ void PX4FirmwarePlugin::updateAvailableFlightModes(FlightModeList &modeList)
         }
     }
     _updateFlightModeList(modeList);
-}
-
-QVariant PX4FirmwarePlugin::expandedToolbarIndicatorSource(const Vehicle* /*vehicle*/, const QString& indicatorName) const
-{
-    if (indicatorName == "Battery") {
-        return QVariant::fromValue(QUrl::fromUserInput("qrc:/qml/QGroundControl/FirmwarePlugin/PX4/PX4BatteryIndicator.qml"));
-    } else if (indicatorName == "FlightMode") {
-        return QVariant::fromValue(QUrl::fromUserInput("qrc:/qml/QGroundControl/FirmwarePlugin/PX4/PX4FlightModeIndicator.qml"));
-    } else if (indicatorName == "MainStatus") {
-        return QVariant::fromValue(QUrl::fromUserInput("qrc:/qml/QGroundControl/FirmwarePlugin/PX4/PX4MainStatusIndicator.qml"));
-    }
-
-    return QVariant();
 }

@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "MissionCommandList.h"
 #include "JsonHelper.h"
 #include "MissionCommandUIInfo.h"
@@ -43,10 +52,10 @@ void MissionCommandList::_loadMavCmdInfoJson(const QString& jsonFilename, bool b
 
         MissionCommandUIInfo* uiInfo = new MissionCommandUIInfo(this);
 
-        QString uiInfoErrorString;
-        if (!uiInfo->loadJsonInfo(info.toObject(), baseCommandList, uiInfoErrorString)) {
+        QString errorString;
+        if (!uiInfo->loadJsonInfo(info.toObject(), baseCommandList, errorString)) {
             uiInfo->deleteLater();
-            qWarning() << jsonFilename << uiInfoErrorString;
+            qWarning() << jsonFilename << errorString;
             return;
         }
 

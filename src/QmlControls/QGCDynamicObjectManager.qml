@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 
-import QGroundControl
+import QGroundControl.Palette
+import QGroundControl.ScreenTools
 
 /// Provides a standard set of tools for dynamically create/adding/removing Qml objects
 Item {
@@ -14,9 +15,6 @@ Item {
 
     function createObject(sourceComponent, parentObject, addMapItem) {
         var obj = sourceComponent.createObject(parentObject)
-        if (obj.status === Component.Error) {
-            console.log(obj.errorString())
-        }
         rgDynamicObjects.push(obj)
         if (arguments.length < 3) {
             addMapItem = false

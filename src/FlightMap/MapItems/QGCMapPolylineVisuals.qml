@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtLocation
@@ -5,8 +14,11 @@ import QtPositioning
 import QtQuick.Dialogs
 
 import QGroundControl
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 import QGroundControl.Controls
 import QGroundControl.FlightMap
+import QGroundControl.ShapeFileHelper
 
 /// QGCMapPolyline map visuals
 Item {
@@ -85,8 +97,8 @@ Item {
 
     Connections {
         target: mapPolyline
-        function onTraceModeChanged(traceMode) {
-            if (traceMode) {
+        onTraceModeChanged: {
+            if (mapPolyline.traceMode) {
                 _instructionText = _traceText
                 _objMgrTraceVisuals.createObject(traceMouseAreaComponent, mapControl, false)
             } else {
@@ -139,14 +151,8 @@ Item {
 
         QGCMenuItem {
             text:           qsTr("Edit position..." )
-            onTriggered:    editPositionDialogFactory.open({ coordinate: mapPolyline.path[menu._removeVertexIndex] })
+            onTriggered:    editPositionDialog.createObject(mainWindow, { coordinate: mapPolyline.path[menu._removeVertexIndex] }).open()
         }
-    }
-
-    QGCPopupDialogFactory {
-        id: editPositionDialogFactory
-
-        dialogComponent: editPositionDialog
     }
 
     Component {
@@ -371,3 +377,4 @@ Item {
         }
     }
 }
+

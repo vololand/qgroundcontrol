@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -6,9 +15,10 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FactControls
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
 
 SettingsPage {
-    id:                             _root
     property var _linkManager:          QGroundControl.linkManager
     property var _autoConnectSettings:  QGroundControl.settingsManager.autoConnectSettings
 
@@ -134,7 +144,7 @@ SettingsPage {
                         fillItem: parent
                         onClicked: {
                             var editingConfig = _linkManager.startConfigurationEditing(object)
-                            linkDialogFactory.open({ editingConfig: editingConfig, originalConfig: object })
+                            linkDialogComponent.createObject(mainWindow, { editingConfig: editingConfig, originalConfig: object }).open()
                         }
                     }
                 }
@@ -155,11 +165,10 @@ SettingsPage {
 
                     QGCMouseArea {
                         fillItem:   parent
-                        onClicked:  QGroundControl.showMessageDialog(
-                                        _root,
-                                        qsTr("Delete Link"),
-                                        qsTr("Are you sure you want to delete '%1'?").arg(object.name),
-                                        Dialog.Ok | Dialog.Cancel,
+                        onClicked:  mainWindow.showMessageDialog(
+                                        qsTr("Delete Link"), 
+                                        qsTr("Are you sure you want to delete '%1'?").arg(object.name), 
+                                        Dialog.Ok | Dialog.Cancel, 
                                         function () {
                                             _linkManager.removeConfiguration(object)
                                         })
@@ -184,15 +193,9 @@ SettingsPage {
 
             onClicked: {
                 var editingConfig = _linkManager.createConfiguration(ScreenTools.isSerialAvailable ? LinkConfiguration.TypeSerial : LinkConfiguration.TypeUdp, "")
-                linkDialogFactory.open({ editingConfig: editingConfig, originalConfig: null })
+                linkDialogComponent.createObject(mainWindow, { editingConfig: editingConfig, originalConfig: null }).open()
             }
         }
-    }
-
-    QGCPopupDialogFactory {
-        id: linkDialogFactory
-
-        dialogComponent: linkDialogComponent
     }
 
     Component {
@@ -268,20 +271,13 @@ SettingsPage {
 
                 Loader {
                     id:     linkSettingsLoader
-                    source: editingConfig && editingConfig.settingsURL ? editingConfig.settingsURL : ""
-                    asynchronous: true
+                    source: subEditConfig.settingsURL
 
                     property var subEditConfig:         editingConfig
                     property int _firstColumnWidth:     ScreenTools.defaultFontPixelWidth * 12
                     property int _secondColumnWidth:    ScreenTools.defaultFontPixelWidth * 30
                     property int _rowSpacing:           ScreenTools.defaultFontPixelHeight / 2
                     property int _colSpacing:           ScreenTools.defaultFontPixelWidth / 2
-
-                    onStatusChanged: {
-                        if (status === Loader.Error) {
-                            console.warn("Failed to load link settings page:", source)
-                        }
-                    }
                 }
             }
         }

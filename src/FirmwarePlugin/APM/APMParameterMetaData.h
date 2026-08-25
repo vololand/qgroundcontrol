@@ -1,3 +1,13 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+
 #pragma once
 
 #include <QtCore/QLoggingCategory>
@@ -54,18 +64,24 @@ public:
     static void getParameterMetaDataVersionInfo(const QString &metaDataFile, int &majorVersion, int &minorVersion);
 
 private:
-    enum XmlState {
-        None,
-        ParamFileFound,
-        FoundVehicles,
-        FoundLibraries,
-        FoundParameters,
-        FoundVersion,
-        FoundGroup,
-        FoundParameter,
-        Done
+    enum {
+        XmlStateNone,
+        XmlstateParamFileFound,
+        XmlStateFoundVehicles,
+        XmlStateFoundLibraries,
+        XmlStateFoundParameters,
+        XmlStateFoundVersion,
+        XmlStateFoundGroup,
+        XmlStateFoundParameter,
+        XmlStateDone
     };
 
+    /// Converts a string to a typed QVariant
+    ///     @param string String to convert
+    ///     @param type Type for Fact which dictates the QVariant type as well
+    ///     @param convertOk Returned: true: conversion success, false: conversion failure
+    /// @return Returns the correctly type QVariant
+    static QVariant _stringToTypedVariant(const QString &string, FactMetaData::ValueType_t type, bool *convertOk);
     static bool _skipXMLBlock(QXmlStreamReader &xml, const QString &blockName);
     bool _parseParameterAttributes(QXmlStreamReader &xml, APMFactMetaDataRaw *rawMetaData);
     static void _correctGroupMemberships(ParameterNametoFactMetaDataMap &parameterToFactMetaDataMap, QMap<QString,QStringList> &groupMembers);
@@ -75,4 +91,6 @@ private:
     bool _parameterMetaDataLoaded = false; ///< true: parameter meta data already loaded
     // FIXME: metadata is vehicle type specific now
     QMap<QString, ParameterNametoFactMetaDataMap> _vehicleTypeToParametersMap; ///< Maps from a vehicle type to paramametertoFactMeta map>
+
+    static constexpr const char *kInvalidConverstion = "Internal Error: No support for string parameters";
 };

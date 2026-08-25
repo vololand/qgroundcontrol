@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #pragma once
 
 #include <QtCore/QFile>
@@ -13,7 +22,6 @@ class QGCLogging : public QStringListModel
 
 public:
     explicit QGCLogging(QObject *parent = nullptr);
-    ~QGCLogging();
 
     /// Get the singleton instance
     static QGCLogging *instance();
@@ -24,8 +32,11 @@ public:
     /// Write current log messages to a file asynchronously
     Q_INVOKABLE void writeMessages(const QString &destFile);
 
-    /// Enqueue a log message (thread-safe)
-    void log(const QString &message);
+    /// Enqueue a log message (thread-safe). QML에서 앱 로그 창에 남기려면 debugMessageModel.log("msg") 호출.
+    Q_INVOKABLE void log(const QString &message);
+
+    /// Log message to C++ console (qDebug). VS 디버그 출력 창에 확실히 표시. QML 디버깅용.
+    Q_INVOKABLE void logToConsole(const QString &message);
 
 signals:
     /// Emitted when a log message is enqueued
